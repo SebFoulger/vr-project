@@ -2,13 +2,14 @@ import mpl_toolkits.mplot3d.axes3d as p3
 from matplotlib import animation
 import pandas as pd
 from matplotlib import pyplot as plt
-
-import configparser
+import os
+os.environ["GIT_PYTHON_REFRESH"] = "quiet"
+import git
 
 from plottable_objects import *
 
-config = configparser.RawConfigParser()
-config.read(filenames = './animation_config')
+repo = git.Repo('.', search_parent_directories=True)
+repo.working_tree_dir
 
 fps = 1000 # Frames per second for animation
 
@@ -18,7 +19,7 @@ delta = 0.01
 
 total_frames = 10000
 
-file_location = config.get('main', 'FILE_LOCATION')
+file_location = repo.working_tree_dir+"/input_data/test1.csv"
 
 df = pd.read_csv(file_location)[::skip_frames].reset_index()
 
