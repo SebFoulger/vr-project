@@ -54,8 +54,17 @@ def update_points(t):
         plots["controller"].update(t,color="black")
 
 
+def on_press(event):
+    if event.key.isspace():
+        if ani.running:
+            ani.event_source.stop()
+        else:
+            ani.event_source.start()
+        ani.running ^= True
 
+fig.canvas.mpl_connect('key_press_event', on_press)
 ani=animation.FuncAnimation(fig, update_points, frames=total_frames, interval = int(1000/fps))
+ani.running = True
 
 ax.legend()
 ax.set_xlabel("x")
