@@ -5,6 +5,36 @@ import pandas as pd
 import numpy as np
 from linear_approach import LinearSegmentation
 
+def plot_prediction(time: pd.Series,
+                    y: pd.Series,
+                    cut_time: float = 1,
+                    plot_breaks: bool = False,
+                    beta_bool: bool = True,
+                    sig_level: float = 0.01,
+                    break_line_color: str = 'black',
+                    prediction_line_color: str = 'orange',
+                    prediction_line_label: str = 'prediction',
+                    init_segment_size: int = 10,
+                    window_size: int = 10,
+                    step: int = 1):
+    
+    prev_break = 0
+    for _break in list(time.loc[time.diff()>cut_time].index)+[len(time)]:
+        cur_time = time[prev_break:_break-1]
+        cur_y = y[prev_break:_break-1]
+        
+        segmentation = LinearSegmentation(x=cur_time,y=cur_y)
+        predictions, breakpoints = segmentation.segment(init_segment_size=init_segment_size, 
+                                                        window_size=window_size,
+                                                        step=step,
+                                                        beta_bool=beta_bool,
+                                                        sig_level=sig_level)
+        if plot_breaks:
+            for small_break in breakpoints:
+                plt.plot([time[small_break],time[small_break]],[min(y),max(y)], color=break_line_color)
+        plt.plot(time[prev_break:prev_break+len(predictions)],predictions, color=prediction_line_color, label=prediction_line_label)
+        prev_break = _break 
+
 repo = git.Repo('.', search_parent_directories=True)
 repo.working_tree_dir
 
@@ -24,25 +54,17 @@ df_diff['controller_dist'] = np.sqrt(df_diff['controller_x']**2+df_diff['control
 df_dist = df_diff[['time','head_dist','controller_dist']]
 df_dist['time_exp'] = time_exp
 
-
 df_speed = df_dist[['time']]
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
 df_speed = df_speed[:5000].reset_index()
-prev_break = 0
-cut_time = 1
+
 plt.plot(df_speed['time_exp'],df_speed['head_speed'], label='head')
 start = time.time()
-for _break in list(df_speed['time_exp'].loc[df_speed['time_exp'].diff()>cut_time].index)+[len(df_speed)]:
-    cur_df = df_speed[prev_break:_break-1]
-
-    segmentation = LinearSegmentation(x=cur_df['time_exp'],y=cur_df['head_speed'])
-    predictions, breakpoints = segmentation.segment()
-
-    plt.plot(df_speed['time_exp'][prev_break:prev_break+len(predictions)],predictions, label='prediction')
-    prev_break = _break
+plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'])
+plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], beta_bool=False, prediction_line_color='green')
 print(time.time()-start)
-
+plt.legend()
 plt.title('Speed')
 plt.show()

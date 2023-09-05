@@ -22,7 +22,8 @@ class LinearSegmentation:
                 init_segment_size: int = 10,
                 window_size: int = 10, 
                 step: int = 1, 
-                sig_level: float = 0.05):
+                sig_level: float = 0.05,
+                beta_bool: bool = True):
         """Apply segmentation procedure.
 
         Args:
@@ -37,7 +38,7 @@ class LinearSegmentation:
         cur_x = self.x.copy()
         cur_y = self.y.copy()
         i, predictions = self._ind_segment(cur_x, cur_y, init_segment_size=init_segment_size, 
-                                                           window_size=window_size, step=step, sig_level = sig_level)
+                                                           window_size=window_size, step=step, sig_level = sig_level,beta_bool=beta_bool)
         breakpoints = [i]
         while len(cur_x)>i:
             cur_x = cur_x[i:]
@@ -45,7 +46,7 @@ class LinearSegmentation:
 
             i, left_predictions = self._ind_segment(cur_x, cur_y, 
                                                     init_segment_size=init_segment_size, window_size=window_size, 
-                                                    step=step, sig_level = sig_level)
+                                                    step=step, sig_level = sig_level, beta_bool=beta_bool)
             if left_predictions is not None:
                 predictions = np.concatenate([predictions,left_predictions])
                 breakpoints.append(i)
@@ -69,7 +70,8 @@ class LinearSegmentation:
                      init_segment_size: int = 10, 
                      window_size: int = 10, 
                      step: int = 1, 
-                     sig_level: float = 0.05):
+                     sig_level: float = 0.05,
+                     beta_bool: bool = True):
         """Finds one individual segment.
 
         Args:
@@ -81,7 +83,7 @@ class LinearSegmentation:
             sig_level (float, optional): Significance level for statistical difference. Defaults to 0.05.
 
         Returns:
-            int, pd.Series: breakpoint for new segment, and a series of predictions for this segment.
+            int, pd.Series: breakpoint for beta_bool segment, and a series of predictions for this segment.
         """        
         for i in range(len(y)):
             if i*step+init_segment_size>=len(x)-1:
@@ -93,8 +95,11 @@ class LinearSegmentation:
             right_model = sm.OLS(y[i*step+init_segment_size:i*step+init_segment_size+window_size],
                                 sm.add_constant(x[i*step+init_segment_size:i*step+init_segment_size+window_size]))
             right_results = right_model.fit()
-
-            if right_results.t_test(left_params).pvalue <= sig_level:
+            _break = i*step+init_segment_size
+            if beta_bool and right_results.t_test(f'time_exp = {left_params["time_exp"]}').pvalue <= sig_level:
+                
+                break
+            elif not beta_bool and right_results.t_test(left_params).pvalue <= sig_level:
                 break
 
-        return i*step+init_segment_size, left_results.predict()
+        return _break, left_results.predict()
