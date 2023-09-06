@@ -24,7 +24,8 @@ class LinearSegmentation:
                 step: int = 1, 
                 sig_level: float = 0.05,
                 beta_bool: bool = True,
-                force_left_intersection: bool = False):
+                force_left_intersection: bool = False,
+                force_right_intersection: bool = False):
         """Apply segmentation procedure.
 
         Args:
@@ -34,8 +35,10 @@ class LinearSegmentation:
             sig_level (float, optional): Significance level for statistical difference. Defaults to 0.05.
             beta_bool (bool, optional): Indicates whether statistical significance should be based only on betas, or
             also on intercepts. Defaults to True.
-            force_left_intersection (bool, optional): Forces each left segment to connect to the last if True. Defaults 
-            to False.
+            force_left_intersection (bool, optional): Forces each left segment to connect to the last if True. beta_bool
+            must be True if this is True. Defaults to False. 
+            force_right_intersection (bool, optional): Forces each right window to connect to the left segment if True. 
+            beta_bool must be True if this is True. Defaults to False. 
 
         Returns:
             pd.Series, list: Predictions of fitted model and list of breakpoints for segments
@@ -43,7 +46,8 @@ class LinearSegmentation:
         cur_x = self.x.copy()
         cur_y = self.y.copy()
         i, predictions = self._ind_segment(cur_x, cur_y, init_segment_size=init_segment_size, 
-                                                           window_size=window_size, step=step, sig_level = sig_level,beta_bool=beta_bool)
+                                           window_size=window_size, step=step, sig_level = sig_level,beta_bool=beta_bool,
+                                           right_intersection = force_right_intersection)
         breakpoints = [i]
         while len(cur_x)>i:
             last_x = cur_x[list(cur_x.index)[0]+i-1]
@@ -57,7 +61,7 @@ class LinearSegmentation:
             i, left_predictions = self._ind_segment(cur_x, cur_y, 
                                                     init_segment_size=init_segment_size, window_size=window_size, 
                                                     step=step, sig_level = sig_level, beta_bool=beta_bool,
-                                                    left_intersection = left_intersection)
+                                                    left_intersection = left_intersection, right_intersection=force_right_intersection)
 
             if left_predictions is not None:
                 predictions = np.concatenate([predictions,left_predictions])
@@ -105,25 +109,26 @@ class LinearSegmentation:
         Returns:
             int, pd.Series: breakpoint for beta_bool segment, and a series of predictions for this segment.
         """
-        if left_intersection is not None:
-            x = x-left_intersection[0]
-            y = y-left_intersection[1]
         for i in range(len(y)):
             if i*step+init_segment_size>=len(x)-1:
                 return i, None
             if left_intersection is None:
                 left_model = sm.OLS(y[:i*step+init_segment_size],sm.add_constant(x[:i*step+init_segment_size]))
             else:
-                left_model = sm.OLS(y[:i*step+init_segment_size],x[:i*step+init_segment_size])
+                left_model = sm.OLS(y[:i*step+init_segment_size]-left_intersection[1],
+                                    x[:i*step+init_segment_size]-left_intersection[0])
             left_results = left_model.fit()
             left_predictions = left_results.predict()
             left_params = left_results.params
-            right_model = sm.OLS(y[i*step+init_segment_size:i*step+init_segment_size+window_size],
+            if right_intersection:
+                right_model = sm.OLS(y[i*step+init_segment_size:i*step+init_segment_size+window_size]-left_predictions[-1],
+                                     x[i*step+init_segment_size:i*step+init_segment_size+window_size]-x.iloc[i*step+init_segment_size])
+            else:
+                right_model = sm.OLS(y[i*step+init_segment_size:i*step+init_segment_size+window_size],
                                 sm.add_constant(x[i*step+init_segment_size:i*step+init_segment_size+window_size]))
             right_results = right_model.fit()
             _break = i*step+init_segment_size
             if beta_bool and right_results.t_test(f'time_exp = {left_params["time_exp"]}').pvalue <= sig_level:
-                
                 break
             elif not beta_bool and right_results.t_test(left_params).pvalue <= sig_level:
                 break
