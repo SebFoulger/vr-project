@@ -16,7 +16,8 @@ def plot_prediction(time: pd.Series,
                     prediction_line_label: str = 'prediction',
                     init_segment_size: int = 10,
                     window_size: int = 10,
-                    step: int = 1):
+                    step: int = 1,
+                    force_intersection: bool = False):
     
     prev_break = 0
     for _break in list(time.loc[time.diff()>cut_time].index)+[len(time)]:
@@ -27,8 +28,9 @@ def plot_prediction(time: pd.Series,
         predictions, breakpoints = segmentation.segment(init_segment_size=init_segment_size, 
                                                         window_size=window_size,
                                                         step=step,
+                                                        sig_level=sig_level,
                                                         beta_bool=beta_bool,
-                                                        sig_level=sig_level)
+                                                        force_intersection=force_intersection)
         if plot_breaks:
             for small_break in breakpoints:
                 plt.plot([time[small_break],time[small_break]],[min(y),max(y)], color=break_line_color)
@@ -62,8 +64,8 @@ df_speed = df_speed[:5000].reset_index()
 
 plt.plot(df_speed['time_exp'],df_speed['head_speed'], label='head')
 start = time.time()
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'])
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], beta_bool=False, prediction_line_color='green')
+plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_intersection = True)
+plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_intersection = False, prediction_line_color='green')
 print(time.time()-start)
 plt.legend()
 plt.title('Speed')
