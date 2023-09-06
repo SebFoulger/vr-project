@@ -42,39 +42,46 @@ class LinearSegmentation:
 
         Returns:
             pd.Series, list: Predictions of fitted model and list of breakpoints for segments
-        """        
+        """  
+        # Will be the remaining data to segment throughout the process
         cur_x = self.x.copy()
         cur_y = self.y.copy()
+        # STEP 1: find initial leftmost segment
         i, predictions = self._ind_segment(cur_x, cur_y, init_segment_size=init_segment_size, 
                                            window_size=window_size, step=step, sig_level = sig_level,beta_bool=beta_bool,
                                            right_intersection = force_right_intersection)
         breakpoints = [i]
+        # STEP 2: find intermediate segments
         while len(cur_x)>i:
+            # Represents the last x value in the current segment
             last_x = cur_x[list(cur_x.index)[0]+i-1]
+            # Remove new segment data from current considered data
             cur_x = cur_x[i:]
             cur_y = cur_y[i:]
             if force_left_intersection:
+                # Intersection is the last point of the previous prediction
                 left_intersection = (last_x,predictions[len(predictions)-1])
-                
             else:
                 left_intersection=None
+            # Get new left segment and breakpoint
             i, left_predictions = self._ind_segment(cur_x, cur_y, 
                                                     init_segment_size=init_segment_size, window_size=window_size, 
                                                     step=step, sig_level = sig_level, beta_bool=beta_bool,
                                                     left_intersection = left_intersection, right_intersection=force_right_intersection)
-
+            # Checking if the new segment is not empty
             if left_predictions is not None:
                 predictions = np.concatenate([predictions,left_predictions])
                 breakpoints.append(i)
             else:
+                # Finish if it is empty
                 break
-        
+        # STEP 3: find final segment (if there is any data left)
         if len(cur_x)>0:
             final_model = sm.OLS(cur_y,sm.add_constant(cur_x))
             final_results = final_model.fit()
             final_predictions = final_results.predict()
             predictions = np.concatenate([predictions,final_predictions])
-
+        # Turn distances between breakpoints into breakpoints by accumulating
         for i in range(1,len(breakpoints)):
             breakpoints[i]+=breakpoints[i-1]
 
@@ -109,30 +116,45 @@ class LinearSegmentation:
         Returns:
             int, pd.Series: breakpoint for beta_bool segment, and a series of predictions for this segment.
         """
-        for i in range(len(y)):
-            if i*step+init_segment_size>=len(x)-1:
+        # Iterate moving window size
+        for i in range(0,len(y),step):
+            # If there isn't enough data left then finish
+            if i+init_segment_size>=len(x)-1:
                 return i, None
+            # STEP 1: find left segment
+            # If we don't want to force a left intersect
             if left_intersection is None:
-                left_model = sm.OLS(y[:i*step+init_segment_size],sm.add_constant(x[:i*step+init_segment_size]))
+                left_model = sm.OLS(y[:i+init_segment_size],sm.add_constant(x[:i+init_segment_size]))
             else:
-                left_model = sm.OLS(y[:i*step+init_segment_size]-left_intersection[1],
-                                    x[:i*step+init_segment_size]-left_intersection[0])
+                # Shift data to pass through left_intersection
+                left_model = sm.OLS(y[:i+init_segment_size]-left_intersection[1],
+                                    x[:i+init_segment_size]-left_intersection[0])
+            # Fit left segment
             left_results = left_model.fit()
             left_predictions = left_results.predict()
             left_params = left_results.params
+            # STEP 2: find right window
+            # If we are forcing the right window to intersect the left segment
             if right_intersection:
-                right_model = sm.OLS(y[i*step+init_segment_size:i*step+init_segment_size+window_size]-left_predictions[-1],
-                                     x[i*step+init_segment_size:i*step+init_segment_size+window_size]-x.iloc[i*step+init_segment_size])
+                # Shift data to pass through the end of the left segment
+                right_model = sm.OLS(y[i+init_segment_size:i+init_segment_size+window_size]-left_predictions[-1],
+                                     x[i+init_segment_size:i+init_segment_size+window_size]-x.iloc[i+init_segment_size])
             else:
-                right_model = sm.OLS(y[i*step+init_segment_size:i*step+init_segment_size+window_size],
-                                sm.add_constant(x[i*step+init_segment_size:i*step+init_segment_size+window_size]))
+                right_model = sm.OLS(y[i+init_segment_size:i+init_segment_size+window_size],
+                                sm.add_constant(x[i+init_segment_size:i+init_segment_size+window_size]))
             right_results = right_model.fit()
-            _break = i*step+init_segment_size
+            # Breakpoint
+            _break = i+init_segment_size
+            # If we are enforcing a left intersection we need to shift the predictions
+            if left_intersection is not None:
+                _return = _break, left_predictions+left_intersection[1]
+            else:
+                _return = _break, left_predictions
+            # STEP 3: check for statistical significance
+            # Statistical significance test on betas
             if beta_bool and right_results.t_test(f'time_exp = {left_params["time_exp"]}').pvalue <= sig_level:
-                break
+                return _return
+            # Statistical significance test on betas and constant
             elif not beta_bool and right_results.t_test(left_params).pvalue <= sig_level:
-                break
-        if left_intersection is not None:
-            return _break, left_predictions+left_intersection[1]
-        else:
-            return _break, left_predictions
+                return _return
+
