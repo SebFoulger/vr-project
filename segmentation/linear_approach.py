@@ -116,6 +116,7 @@ class LinearSegmentation:
         Returns:
             int, pd.Series: breakpoint for beta_bool segment, and a series of predictions for this segment.
         """
+        prev_pvalue = 1
         # Iterate moving window size
         for i in range(0,len(y),step):
             # If there isn't enough data left then finish
@@ -145,16 +146,17 @@ class LinearSegmentation:
             right_results = right_model.fit()
             # Breakpoint
             _break = i+init_segment_size
+            if beta_bool:
+                pvalue = right_results.t_test(f'time_exp = {left_params["time_exp"]}').pvalue
+            else:
+                pvalue = right_results.t_test(left_params).pvalue <= sig_level
+            # STEP 3: check for statistical significance
+            if pvalue <= sig_level and pvalue>prev_pvalue:
+                return prev_return
             # If we are enforcing a left intersection we need to shift the predictions
             if left_intersection is not None:
-                _return = _break, left_predictions+left_intersection[1]
+                prev_return = _break, left_predictions+left_intersection[1]
             else:
-                _return = _break, left_predictions
-            # STEP 3: check for statistical significance
-            # Statistical significance test on betas
-            if beta_bool and right_results.t_test(f'time_exp = {left_params["time_exp"]}').pvalue <= sig_level:
-                return _return
-            # Statistical significance test on betas and constant
-            elif not beta_bool and right_results.t_test(left_params).pvalue <= sig_level:
-                return _return
+                prev_return = _break, left_predictions
+            prev_pvalue = pvalue
 
