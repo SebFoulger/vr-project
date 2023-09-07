@@ -62,14 +62,14 @@ df_speed = df_dist[['time']]
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
-df_speed = df_speed[:5000].reset_index()
+df_speed = df_speed[:2000].reset_index()
 
 plt.plot(df_speed['time_exp'],df_speed['head_speed'], label='head')
 start = time.time()
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_right_intersection = True)
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_right_intersection = False, prediction_line_color='green')
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_left_intersection=True, force_right_intersection = True, prediction_line_color='red')
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_left_intersection=True,force_right_intersection = False, prediction_line_color='yellow')
+#plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_right_intersection = True)
+plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_right_intersection = False, prediction_line_color='orange')
+#plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_left_intersection=True, force_right_intersection = True, prediction_line_color='red')
+#plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_left_intersection=True,force_right_intersection = False, prediction_line_color='yellow')
 
 print(time.time()-start)
 plt.legend()
