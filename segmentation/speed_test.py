@@ -4,6 +4,7 @@ import time
 import pandas as pd
 import numpy as np
 from linear_approach import LinearSegmentation
+from summarize_segments import summarize
 
 def plot_prediction(time: pd.Series,
                     y: pd.Series,
@@ -19,7 +20,7 @@ def plot_prediction(time: pd.Series,
                     step: int = 1,
                     force_left_intersection: bool = False,
                     force_right_intersection: bool = False):
-    
+    all_breakpoints = []
     prev_break = 0
     for _break in list(time.loc[time.diff()>cut_time].index)+[len(time)]:
         cur_time = time[prev_break:_break-1]
@@ -33,11 +34,13 @@ def plot_prediction(time: pd.Series,
                                                         beta_bool=beta_bool,
                                                         force_left_intersection=force_left_intersection,
                                                         force_right_intersection=force_right_intersection)
+        all_breakpoints += [prev_break]+list(map(lambda x: x+prev_break,breakpoints))+[prev_break+len(predictions)]
         if plot_breaks:
             for small_break in breakpoints:
                 plt.plot([time[small_break],time[small_break]],[min(y),max(y)], color=break_line_color)
         plt.plot(time[prev_break:prev_break+len(predictions)],predictions, color=prediction_line_color, label=prediction_line_label)
         prev_break = _break 
+    return all_breakpoints
 
 repo = git.Repo('.', search_parent_directories=True)
 repo.working_tree_dir
@@ -62,16 +65,18 @@ df_speed = df_dist[['time']]
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
-df_speed = df_speed[:2000].reset_index()
+df_speed = df_speed[:2000].reset_index(drop=True)
+plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='controller')
 
-plt.plot(df_speed['time_exp'],df_speed['head_speed'], label='head')
 start = time.time()
-#plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_right_intersection = True)
-plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_right_intersection = False, prediction_line_color='green')
-#plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_left_intersection=True, force_right_intersection = True, prediction_line_color='red')
-#plot_prediction(time=df_speed['time_exp'],y=df_speed['head_speed'], force_left_intersection=True,force_right_intersection = False, prediction_line_color='yellow')
-
+all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='green')
+#plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.01)
+#plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='orange',sig_level=0.001)
+#plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='yellow',sig_level=0.0001)
+plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='green',sig_level=0.05)
 print(time.time()-start)
 plt.legend()
+plt.xlabel('Time (seconds)')
+plt.ylabel('Speed (unit/second)')
 plt.title('Speed')
 plt.show()
