@@ -65,15 +65,12 @@ df_speed = df_dist[['time']]
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
-df_speed = df_speed[:2000].reset_index(drop=True)
+df_speed = df_speed[:6000].reset_index(drop=True)
 plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='controller')
 
 start = time.time()
-all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='green')
-#plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.01)
-#plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='orange',sig_level=0.001)
-#plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='yellow',sig_level=0.0001)
-plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='green',sig_level=0.05)
+all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.001)
+#summarize(df = df_speed[['time_exp','controller_speed']],breakpoints = all_breakpoints, col='controller_speed')
 print(time.time()-start)
 plt.legend()
 plt.xlabel('Time (seconds)')
