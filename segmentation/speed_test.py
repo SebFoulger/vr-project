@@ -65,15 +65,17 @@ df_speed = df_dist[['time']]
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
-df_speed = df_speed[:6000].reset_index(drop=True)
+df_speed = df_speed[:2000].reset_index(drop=True)
+df_speed.to_csv('speed.csv',index=False)
 plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='controller')
 
 start = time.time()
 all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.001)
-#summarize(df = df_speed[['time_exp','controller_speed']],breakpoints = all_breakpoints, col='controller_speed')
+summarize(df = df_speed[['time_exp','controller_speed']],breakpoints = all_breakpoints, col='controller_speed')
 print(time.time()-start)
 plt.legend()
 plt.xlabel('Time (seconds)')
 plt.ylabel('Speed (unit/second)')
 plt.title('Speed')
 plt.show()
+
