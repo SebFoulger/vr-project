@@ -69,8 +69,8 @@ df_speed = df_speed[:2000].reset_index(drop=True)
 plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='controller')
 
 start = time.time()
-all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.001)
-summarize(df = df_speed[['time_exp','controller_speed']],breakpoints = all_breakpoints, col='controller_speed')
+all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.00001, force_left_intersection=True, force_right_intersection=True, init_segment_size=5, window_size=5)
+summarize(df = df_speed[['time_exp','controller_speed']],breakpoints = all_breakpoints, col='controller_speed', beta_bool=True)
 
 print(time.time()-start)
 plt.legend()

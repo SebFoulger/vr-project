@@ -52,29 +52,32 @@ class LinearSegmentation:
                                            right_intersection = force_right_intersection)
         breakpoints = [i]
         # STEP 2: find intermediate segments
-        while len(cur_x)>i:
-            # Represents the last x value in the current segment
-            last_x = cur_x[list(cur_x.index)[0]+i-1]
-            # Remove new segment data from current considered data
-            cur_x = cur_x[i:]
-            cur_y = cur_y[i:]
-            if force_left_intersection:
-                # Intersection is the last point of the previous prediction
-                left_intersection = (last_x,predictions[len(predictions)-1])
-            else:
-                left_intersection=None
-            # Get new left segment and breakpoint
-            i, left_predictions = self._ind_segment(cur_x, cur_y, 
-                                                    init_segment_size=init_segment_size, window_size=window_size, 
-                                                    step=step, sig_level = sig_level, beta_bool=beta_bool,
-                                                    left_intersection = left_intersection, right_intersection=force_right_intersection)
-            # Checking if the new segment is not empty
-            if left_predictions is not None:
-                predictions = np.concatenate([predictions,left_predictions])
-                breakpoints.append(i)
-            else:
-                # Finish if it is empty
-                break
+        if predictions is not None:
+            while len(cur_x)>i:
+                # Represents the last x value in the current segment
+                last_x = cur_x[list(cur_x.index)[0]+i-1]
+                # Remove new segment data from current considered data
+                cur_x = cur_x[i:]
+                cur_y = cur_y[i:]
+                if force_left_intersection:
+                    # Intersection is the last point of the previous prediction
+                    left_intersection = (last_x,predictions[len(predictions)-1])
+                else:
+                    left_intersection=None
+                # Get new left segment and breakpoint
+                i, left_predictions = self._ind_segment(cur_x, cur_y, 
+                                                        init_segment_size=init_segment_size, window_size=window_size, 
+                                                        step=step, sig_level = sig_level, beta_bool=beta_bool,
+                                                        left_intersection = left_intersection, right_intersection=force_right_intersection)
+                # Checking if the new segment is not empty
+                if left_predictions is not None:
+                    predictions = np.concatenate([predictions,left_predictions])
+                    breakpoints.append(i)
+                else:
+                    # Finish if it is empty
+                    break
+        else:
+            predictions = np.array([])
         # STEP 3: find final segment (if there is any data left)
         if len(cur_x)>0:
             final_model = sm.OLS(cur_y,sm.add_constant(cur_x))
@@ -133,6 +136,8 @@ class LinearSegmentation:
             # Fit left segment
             left_results = left_model.fit(use_t=True)
             left_predictions = left_results.predict()
+            if left_intersection is not None:
+                left_predictions += left_intersection[1]
             left_params = left_results.params
             # STEP 2: find right window
             # If we are forcing the right window to intersect the left segment
@@ -154,9 +159,6 @@ class LinearSegmentation:
             if pvalue <= sig_level and pvalue>prev_pvalue:
                 return prev_return
             # If we are enforcing a left intersection we need to shift the predictions
-            if left_intersection is not None:
-                prev_return = _break, left_predictions+left_intersection[1]
-            else:
-                prev_return = _break, left_predictions
+            prev_return = _break, left_predictions
             prev_pvalue = pvalue
 
