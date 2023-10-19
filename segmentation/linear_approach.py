@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-from probabilities import prob
 
 class LinearSegmentation:
     """
@@ -48,7 +47,7 @@ class LinearSegmentation:
         cur_x = self.x.copy()
         cur_y = self.y.copy()
         # STEP 1: find initial leftmost segment
-        i, predictions, probs = self._ind_segment(cur_x, cur_y, init_segment_size=init_segment_size, 
+        i, predictions = self._ind_segment(cur_x, cur_y, init_segment_size=init_segment_size, 
                                            window_size=window_size, step=step, sig_level = sig_level,beta_bool=beta_bool,
                                            right_intersection = force_right_intersection)
         breakpoints = [i]
@@ -66,11 +65,10 @@ class LinearSegmentation:
                 else:
                     left_intersection=None
                 # Get new left segment and breakpoint
-                i, left_predictions, probs_new = self._ind_segment(cur_x, cur_y, 
+                i, left_predictions = self._ind_segment(cur_x, cur_y, 
                                                         init_segment_size=init_segment_size, window_size=window_size, 
                                                         step=step, sig_level = sig_level, beta_bool=beta_bool,
                                                         left_intersection = left_intersection, right_intersection=force_right_intersection)
-                probs += probs_new
                 # Checking if the new segment is not empty
                 if left_predictions is not None:
                     predictions = np.concatenate([predictions,left_predictions])
@@ -90,7 +88,7 @@ class LinearSegmentation:
         for i in range(1,len(breakpoints)):
             breakpoints[i]+=breakpoints[i-1]
 
-        return predictions, breakpoints, probs
+        return predictions, breakpoints
 
     def _ind_segment(self, 
                      x: pd.Series,
@@ -122,12 +120,11 @@ class LinearSegmentation:
             int, pd.Series: breakpoint for beta_bool segment, and a series of predictions for this segment.
         """
         prev_pvalue = 1
-        probs = []
         # Iterate moving window size
         for i in range(0,len(y),step):
             # If there isn't enough data left then finish
             if i+init_segment_size>=len(x)-1:
-                return i, None, probs
+                return i, None
             # STEP 1: find left segment
             # If we don't want to force a left intersect
             if left_intersection is None:
@@ -159,16 +156,10 @@ class LinearSegmentation:
             else:
                 pvalue = right_results.t_test(left_params).pvalue
             # STEP 3: check for statistical significance
-            if pvalue<=sig_level:
-                
-                probs.append((prob(x[:i+init_segment_size], y[:i+init_segment_size], x[i+init_segment_size:].iloc[0])[0],True,i+init_segment_size))
-            else:
-                probs.append((prob(x[:i+init_segment_size], y[:i+init_segment_size], x[i+init_segment_size:].iloc[0])[0],False,i+init_segment_size))
-
             if pvalue <= sig_level and pvalue>prev_pvalue:
                 #print(x.iloc[prev_return[0]],np.var(prev_return[1]-y[:prev_return[0]]))
                 return prev_return
             # If we are enforcing a left intersection we need to shift the predictions
-            prev_return = _break, left_predictions, probs
+            prev_return = _break, left_predictions
             prev_pvalue = pvalue
 
