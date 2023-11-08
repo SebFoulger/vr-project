@@ -139,12 +139,14 @@ class LinearSegmentation:
             if left_intersection is not None:
                 left_predictions += left_intersection[1]
             left_params = left_results.params
+            
+            next_prediction = x.iloc[i+init_segment_size]*left_params['time_exp']
             # STEP 2: find right window
             # If we are forcing the right window to intersect the left segment
             if right_intersection:
                 # Shift data to pass through the end of the left segment
-                right_model = sm.OLS(y[i+init_segment_size:i+init_segment_size+window_size]-left_predictions[-1],
-                                     x[i+init_segment_size:i+init_segment_size+window_size]-x.iloc[i+init_segment_size-1])
+                right_model = sm.OLS(y[i+init_segment_size:i+init_segment_size+window_size]-next_prediction,
+                                     x[i+init_segment_size:i+init_segment_size+window_size]-x.iloc[i+init_segment_size])
             else:
                 right_model = sm.OLS(y[i+init_segment_size:i+init_segment_size+window_size],
                                 sm.add_constant(x[i+init_segment_size:i+init_segment_size+window_size]))
