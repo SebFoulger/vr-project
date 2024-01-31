@@ -6,3 +6,4 @@ notebooks/*
 outputs/*
 *.csv
 *.ipynb
+*.lintr
