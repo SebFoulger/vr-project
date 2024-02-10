@@ -84,7 +84,19 @@ ratio_prob <- function(delta, mu, var, k, w, ratio) {
 
   b2 <- t(P) %*% diag(var^-0.5) %*% mu
 
-  return(imhof(q = 0, lambda = lambda, delta = abs(b2), epsrel = 10^(-7))$Qq)
+  return(1 - imhof(q = 0, lambda = lambda, delta = abs(b2), epsrel = 10^(-7))$Qq)
+}
+
+prob_t_beats_t_abs <- function(delta, mu, var, k, w, ratio) {
+
+  return_val <- prob_t_beats_t(delta, mu, var, k, w, ratio, TRUE) 
+  return_val <- return_val - (1 - prob_t_beats_t(delta, mu, var, k, w, ratio, FALSE))
+
+  ratio_p <- ratio_prob(delta, mu, var, k, w, ratio)
+
+  return_val <- return_val * ratio_p + 1 - ratio_p
+
+  return(return_val)
 }
 
 break_early_prob <- function(k, w, n, delta, beta1, beta2, var1, var2, sig_level, break_tol) {
@@ -97,32 +109,33 @@ break_early_prob <- function(k, w, n, delta, beta1, beta2, var1, var2, sig_level
 
   var <- c(rep(var1, n), rep(var2, w))
 
-  t_t_prob <- 0.001
+  total_prob <- 0
 
-  ratio_total_prob <- 0
+  max_ratio <- 3
+  no_mins <- 72
 
   for (m in (n - k - w + 3):(n - k - break_tol)) {
     input_mu <- mu[c(m:(m + k + w))] - (m - 1) * beta1 * delta
-    f <- function(x) prob_t_beats_t(delta, input_mu, var[c(m:(m + k + w))], k, w, x, TRUE) - (1 - prob_t_beats_t(delta, input_mu, var[c(m:(m + k + w))], k, w, x, FALSE)) - t_t_prob
 
-    upper <- 2
-    while (f(1)<0 & f(upper)<0) {
-      upper <- upper * 2
-    }
+    f <- function(x) prob_t_beats_t_abs(delta, input_mu, var[c(m:(m + k + w))], k, w, x)
 
-    if (f(1)>=0 & f(upper)>=0) {
-      ratio <- uniroot(f = f, interval = c(0, 1))$root
-    } else {
-      ratio <- uniroot(f = f, interval = c(1, upper))$root
+    cur_min <- 1
+
+    # To ensure that we don't get stuck at a local minimum we do multiple intervals
+    for (l in 0:no_mins) {
+      lower <- (max_ratio / no_mins) * l
+      o = optimize(f, interval = c(lower, lower + max_ratio / no_mins), maximum = FALSE)
+      if (o$objective < cur_min) {
+        cur_min <- max(o$objective, 0)
+        best_ratio <- o$minimum
+      }
     }
-    print(ratio)
-    print(ratio_prob(delta, input_mu, var[c(m:(m + k + w))], k, w, ratio))
-    ratio_total_prob <- ratio_total_prob + ratio_prob(delta, input_mu, var[c(m:(m + k + w))], k, w, ratio)
+    total_prob <- total_prob + cur_min
   }
 
-  total <-  t_t_prob * (w - 2) + sig_level * (n + 2 - k - w - break_tol)
+  total_prob <- total_prob + sig_level * (n + 2 - k - w - break_tol)
 
-  return (list(total, ratio_total_prob))
+  return (total_prob)
 }
 
-print(break_early_prob(10, 10, 30, 1/90, -0.5, 0.5, 0.00001, 0.00005, 0.001, 1))
+print(break_early_prob(10, 10, 30, 1/90, -0.1, 0.1, 0.00001, 0.00001, 0.001, 0))
