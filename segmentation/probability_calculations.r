@@ -83,7 +83,6 @@ ratio_prob <- function(delta, mu, var, k, w, ratio) {
   P <- ev$vectors
 
   b2 <- t(P) %*% diag(var^-0.5) %*% mu
-
   return(1 - imhof(q = 0, lambda = lambda, delta = abs(b2), epsrel = 10^(-7))$Qq)
 }
 
@@ -101,18 +100,20 @@ prob_t_beats_t_abs <- function(delta, mu, var, k, w, ratio) {
 
 break_early_prob <- function(k, w, n, delta, beta1, beta2, var1, var2, sig_level, break_tol) {
 
-  x <- seq(delta, (n + w) * delta, by = delta)
+  x <- seq(delta, (n + w - break_tol) * delta, by = delta)
 
   c2 <- (beta1 - beta2) * x[n + 1]
 
-  mu <- c(beta1 * x[c(1:n)], beta2 * x[c((n + 1):(n + w))] + c2)
+  mu <- c(beta1 * x[c(1:n)], beta2 * x[c((n + 1):(n + w - break_tol))] + c2)
 
-  var <- c(rep(var1, n), rep(var2, w))
+  var <- c(rep(var1, n), rep(var2, w - break_tol))
 
   total_prob <- 0
 
   max_ratio <- 3
   no_mins <- 72
+
+  probs <- c()
 
   for (m in (n - k - w + 3):(n - k - break_tol)) {
     input_mu <- mu[c(m:(m + k + w))] - (m - 1) * beta1 * delta
@@ -129,13 +130,30 @@ break_early_prob <- function(k, w, n, delta, beta1, beta2, var1, var2, sig_level
         cur_min <- max(o$objective, 0)
         best_ratio <- o$minimum
       }
+      if (cur_min < 10^(-5)) {
+        break
+      }
     }
+    probs <- append(probs, cur_min)
     total_prob <- total_prob + cur_min
   }
+  "
+  jpeg(paste('images/', as.character(beta1), as.character(beta2), as.character(var1), as.character(var2), '.jpg'), 
+       width = 350, height = 350)
 
-  total_prob <- total_prob + sig_level * (n + 2 - k - w - break_tol)
+  title = bquote('β'[1] ~ '=' ~ .(beta1) ~ ', β'[2] ~ '=' ~ .(beta2) ~ ', σ'[1]^2 ~ '=' ~ .(var1) ~ ', σ'[2]^2 ~ '=' ~ 
+                 .(var2))
+
+  plot(1:length(probs), probs, ylim = c(0, max(probs)), xlab = 'No of points before break', 
+       ylab = 'Probability of breaking early', col = '#2E9FDF', pch = 20, cex=2, xaxt = 'n', main = title)
+
+  axis(1, at=1:length(probs), labels=length(probs):1)
+  dev.off()
+  "
+
+  total_prob <- total_prob + sig_level * (n + 2 - k - w)
 
   return (total_prob)
 }
 
-print(break_early_prob(10, 10, 30, 1/90, -0.1, 0.1, 0.00001, 0.00001, 0.001, 0))
+print(break_early_prob(10, 10, 18, 1/90, -0.1, 0.1, 0.05, 0.05, 0.001, 0))

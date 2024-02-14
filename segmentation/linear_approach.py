@@ -61,7 +61,7 @@ class LinearSegmentation:
                 cur_y = cur_y[i:]
                 if force_left_intersection:
                     # Intersection is the last point of the previous prediction
-                    left_intersection = (last_x,predictions[len(predictions)-1])
+                    left_intersection = (last_x, predictions[len(predictions)-1])
                 else:
                     left_intersection=None
                 # Get new left segment and breakpoint
