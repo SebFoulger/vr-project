@@ -57,7 +57,7 @@ def preprocess(files: list = None):
             os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_head_speed.csv'), index = False)
         df_speed[['timeExp', 'controller_speed']].to_csv(
             os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_controller_speed.csv'), index = False)
-
+        print(file+' done')
 
 if __name__ == "__main__":
     preprocess(sys.argv[1:])
