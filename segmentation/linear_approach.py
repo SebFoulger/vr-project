@@ -140,7 +140,7 @@ class LinearSegmentation:
                 left_predictions += left_intersection[1]
             left_params = left_results.params
             
-            next_prediction = x.iloc[i+init_segment_size]*left_params['time_exp']
+            next_prediction = x.iloc[i+init_segment_size]*left_params['timeExp']
             # STEP 2: find right window
             # If we are forcing the right window to intersect the left segment
             if right_intersection:
@@ -154,7 +154,7 @@ class LinearSegmentation:
             # Breakpoint
             _break = i+init_segment_size
             if beta_bool:
-                pvalue = right_results.t_test(f'time_exp = {left_params["time_exp"]}').pvalue
+                pvalue = right_results.t_test(f'timeExp = {left_params["timeExp"]}').pvalue
             else:
                 pvalue = right_results.t_test(left_params).pvalue
             # STEP 3: check for statistical significance

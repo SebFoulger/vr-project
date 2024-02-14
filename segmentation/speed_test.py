@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 import time
 import pandas as pd
 import numpy as np
+import os
 from linear_approach import LinearSegmentation
 from summarize_segments import summarize
+import sys
 
 def plot_prediction(time: pd.Series,
                     y: pd.Series,
@@ -42,40 +44,29 @@ def plot_prediction(time: pd.Series,
         prev_break = _break 
     return all_breakpoints
 
-repo = git.Repo('.', search_parent_directories=True)
-repo.working_tree_dir
+if __name__ == "__main__":
+    # input_args = [sub, session, object, variable]. i.e. [1, 2, head, speed]
+    input_args = sys.argv[1:]
 
-file_location = repo.working_tree_dir+'/input_data/test1.csv'
-df = pd.read_csv(file_location)[:5000]
+    if len(input_args) == 0:
+        input_args = ['1', '1', 'controller', 'speed']
+    repo = git.Repo('.', search_parent_directories=True)
 
-df=df[['frame',' timeExp','head_x','head_y','head_z',' controller_x',' controller_y',' controller_z']]
-df=df.rename(columns={' controller_x': 'controller_x',' controller_y': 'controller_y',' controller_z': 'controller_z',
-                      ' timeExp': 'time'})
-time_exp = df['time'][1:]
+    file_name = '_'.join(input_args) + '.csv'
 
-df_diff = df.diff().dropna()
+    file = os.path.join(repo.working_tree_dir, 'input_data', file_name)
+    df = pd.read_csv(file)[:5000].reset_index(drop = True)
 
-df_diff['head_dist'] = np.sqrt(df_diff['head_x']**2+df_diff['head_y']**2+df_diff['head_z']**2)
-df_diff['controller_dist'] = np.sqrt(df_diff['controller_x']**2+df_diff['controller_y']**2+df_diff['controller_z']**2)
+    col_name = input_args[2]+'_'+input_args[3]
+    var_name = (input_args[2]+' '+input_args[3]).capitalize()
 
-df_dist = df_diff[['time','head_dist','controller_dist']]   
-df_dist['time_exp'] = time_exp
+    plt.plot(df['timeExp'], df[col_name])
 
-df_speed = df_dist[['time']].copy()
-df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
-df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
-df_speed['time_exp'] = time_exp
-df_speed = df_speed.reset_index(drop=True)
-plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='head')
+    plot_prediction(time = df['timeExp'], y = df[col_name], force_left_intersection = True,
+                    force_right_intersection = True, prediction_line_color = 'red')
 
-start = time.time()
-all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red')
-summarize(df = df_speed[['time_exp','controller_speed']],breakpoints = all_breakpoints, col='controller_speed', beta_bool=True)
-
-print(time.time()-start)
-plt.legend()
-plt.xlabel('Time (seconds)')
-plt.ylabel('Speed (unit/second)')
-plt.title('Speed')
-plt.show()
+    plt.xlabel('Time (seconds)')
+    plt.ylabel(var_name)
+    plt.title('Subject '+input_args[0]+', session '+input_args[1]+', '+var_name)
+    plt.show()
 
