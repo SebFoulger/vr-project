@@ -46,7 +46,7 @@ repo = git.Repo('.', search_parent_directories=True)
 repo.working_tree_dir
 
 file_location = repo.working_tree_dir+'/input_data/test1.csv'
-df = pd.read_csv(file_location)
+df = pd.read_csv(file_location)[:5000]
 
 df=df[['frame',' timeExp','head_x','head_y','head_z',' controller_x',' controller_y',' controller_z']]
 df=df.rename(columns={' controller_x': 'controller_x',' controller_y': 'controller_y',' controller_z': 'controller_z',
@@ -58,15 +58,15 @@ df_diff = df.diff().dropna()
 df_diff['head_dist'] = np.sqrt(df_diff['head_x']**2+df_diff['head_y']**2+df_diff['head_z']**2)
 df_diff['controller_dist'] = np.sqrt(df_diff['controller_x']**2+df_diff['controller_y']**2+df_diff['controller_z']**2)
 
-df_dist = df_diff[['time','head_dist','controller_dist']]
+df_dist = df_diff[['time','head_dist','controller_dist']]   
 df_dist['time_exp'] = time_exp
 
-df_speed = df_dist[['time']]
+df_speed = df_dist[['time']].copy()
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
-df_speed = df_speed[:2000].reset_index(drop=True)
-plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='controller')
+df_speed = df_speed.reset_index(drop=True)
+plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='head')
 
 start = time.time()
 all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red')

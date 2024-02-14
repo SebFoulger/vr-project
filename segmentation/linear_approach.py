@@ -61,7 +61,7 @@ class LinearSegmentation:
                 cur_y = cur_y[i:]
                 if force_left_intersection:
                     # Intersection is the last point of the previous prediction
-                    left_intersection = (last_x,predictions[len(predictions)-1])
+                    left_intersection = (last_x, predictions[len(predictions)-1])
                 else:
                     left_intersection=None
                 # Get new left segment and breakpoint
@@ -139,7 +139,7 @@ class LinearSegmentation:
             if left_intersection is not None:
                 left_predictions += left_intersection[1]
             left_params = left_results.params
-
+            
             next_prediction = x.iloc[i+init_segment_size]*left_params['time_exp']
             # STEP 2: find right window
             # If we are forcing the right window to intersect the left segment
@@ -159,6 +159,7 @@ class LinearSegmentation:
                 pvalue = right_results.t_test(left_params).pvalue
             # STEP 3: check for statistical significance
             if pvalue <= sig_level and pvalue>prev_pvalue:
+                #print(x.iloc[prev_return[0]],np.var(prev_return[1]-y[:prev_return[0]]))
                 return prev_return
             # If we are enforcing a left intersection we need to shift the predictions
             prev_return = _break, left_predictions
