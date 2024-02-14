@@ -46,7 +46,7 @@ repo = git.Repo('.', search_parent_directories=True)
 repo.working_tree_dir
 
 file_location = repo.working_tree_dir+'/input_data/test1.csv'
-df = pd.read_csv(file_location)
+df = pd.read_csv(file_location)[:5000]
 
 df=df[['frame',' timeExp','head_x','head_y','head_z',' controller_x',' controller_y',' controller_z']]
 df=df.rename(columns={' controller_x': 'controller_x',' controller_y': 'controller_y',' controller_z': 'controller_z',
@@ -61,15 +61,17 @@ df_diff['controller_dist'] = np.sqrt(df_diff['controller_x']**2+df_diff['control
 df_dist = df_diff[['time','head_dist','controller_dist']]   
 df_dist['time_exp'] = time_exp
 
-df_speed = df_dist[['time']]
+df_speed = df_dist[['time']].copy()
 df_speed['head_speed'] = df_dist['head_dist']/df_dist['time']
 df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['time']
 df_speed['time_exp'] = time_exp
-df_speed = df_speed[:5000].reset_index(drop=True)
-plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='controller')
+df_speed = df_speed.reset_index(drop=True)
+plt.plot(df_speed['time_exp'],df_speed['controller_speed'], label='head')
 
 start = time.time()
-all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.05, beta_bool=True, force_left_intersection=True, force_right_intersection=True, init_segment_size=5, window_size=5)
+#all_breakpoints = plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='red',sig_level=0.05, beta_bool=True, force_left_intersection=True, force_right_intersection=True, init_segment_size=20, window_size=20)
+plot_prediction(time=df_speed['time_exp'],y=df_speed['controller_speed'], prediction_line_color='orange', beta_bool=True, force_left_intersection=True, force_right_intersection=True, init_segment_size=10, window_size=10, sig_level = 10**(-2))
+
 
 print(time.time()-start)
 plt.legend()
