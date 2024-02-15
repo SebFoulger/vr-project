@@ -54,13 +54,15 @@ if __name__ == "__main__":
         input_args = ['1', '1', 'controller', 'speed']
     repo = git.Repo('.', search_parent_directories = True)
 
-    file_name = '_'.join(input_args) + '.csv'
+    file_name = '_'.join(input_args[:2]) + '.csv'
 
-    file = os.path.join(repo.working_tree_dir, 'input_data', file_name)
+    file = os.path.join(repo.working_tree_dir, 'input_data', input_args[2], input_args[3], file_name)
     df = pd.read_csv(file)[:5000].reset_index(drop = True)
 
     col_name = input_args[2] + '_' + input_args[3]
     var_name = (input_args[2] + ' ' + input_args[3]).capitalize()
+
+    df = df[['timeExp', col_name]].copy().dropna().reset_index(drop=True)
 
     plt.plot(df['timeExp'], df[col_name])
 

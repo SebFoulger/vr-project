@@ -14,6 +14,7 @@ def preprocess(files: list = None):
     """    
     repo = git.Repo('.', search_parent_directories=True)
     raw_file_path = os.path.join(repo.working_tree_dir, 'raw_data')
+    save_path = os.path.join(repo.working_tree_dir, 'input_data')
 
     if len(files) == 0:
         files = os.listdir(raw_file_path)
@@ -29,9 +30,10 @@ def preprocess(files: list = None):
 
         sub = str(df['sub'][0])
         session = str(df['session'][0])
+        file_name = f'{sub}_{session}.csv'
 
         df = df.drop(columns=['frame', 'sub', 'subID', 'timepoint', 'session'])
-        df.to_csv(os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_raw.csv'), index = False)
+        df.to_csv(os.path.join(save_path, 'raw', file_name), index = False)
 
         df = df[['timeExp','head_x','head_y','head_z','controller_x','controller_y','controller_z']].copy()
 
@@ -45,18 +47,31 @@ def preprocess(files: list = None):
         df_dist = df_diff[['timeFrame','head_dist','controller_dist']]   
         df_dist['timeExp'] = df['timeExp'][1:]
         df_dist[['timeExp', 'head_dist']].to_csv(
-            os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_head_dist.csv'), index = False)
+                                            os.path.join(save_path, 'head', 'dist', file_name), index = False)
         df_dist[['timeExp', 'controller_dist']].to_csv(
-            os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_controller_dist.csv'), index = False)
+                                            os.path.join(save_path, 'controller', 'dist', file_name), index = False)
 
         df_speed = df_dist[['timeExp']].copy()
         df_speed['head_speed'] = df_dist['head_dist']/df_dist['timeFrame']
         df_speed['controller_speed'] = df_dist['controller_dist']/df_dist['timeFrame']
 
         df_speed[['timeExp', 'head_speed']].to_csv(
-            os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_head_speed.csv'), index = False)
+                                            os.path.join(save_path, 'head', 'speed', file_name), index = False)
         df_speed[['timeExp', 'controller_speed']].to_csv(
-            os.path.join(repo.working_tree_dir, 'input_data', sub+'_'+session+'_controller_speed.csv'), index = False)
+                                            os.path.join(save_path, 'controller', 'speed', file_name), index = False)
+        
+        df_accel = df_speed.diff().dropna().rename(columns = {'timeExp': 'timeFrame', 'head_speed': 'head_accel',
+                                                            'controller_speed': 'controller_accel'})
+        df_accel['head_accel'] = df_accel['head_accel'] / df_accel['timeFrame']
+        df_accel['controller_accel'] = df_accel['controller_accel'] / df_accel['timeFrame']
+        df_accel['timeExp'] = df['timeExp'][2:]
+
+        df_accel[['timeExp', 'head_accel']].to_csv(
+                                            os.path.join(save_path, 'head', 'accel', file_name), index = False)
+        df_accel[['timeExp', 'controller_accel']].to_csv(
+                                            os.path.join(save_path, 'controller', 'accel', file_name), index = False)
+        
+
         print(file+' done')
 
 if __name__ == "__main__":
