@@ -11,11 +11,11 @@ def summarize(df:pd.DataFrame,
               force_left_intersection: bool = False,
               force_right_intersection: bool = False,
               window_size: int = 10,
-              save_name: str = 'summarize'):
+              save_name: str = 'summarize.csv'):
     """Summarizes segmented data
 
     Args:
-        df (pd.DataFrame): dataframe with columns ['time_exp',col].
+        df (pd.DataFrame): dataframe with columns ['timeExp',col].
         breakpoints (list): list of breakpoints indicating sections.
         col (str): name of column (y values).
         min_break_dist (int, optional): minimum number of points for a segment to be considered. Defaults to 10.
@@ -34,9 +34,9 @@ def summarize(df:pd.DataFrame,
 
     no_segments = len(df_segments)
 
-    df_segments['start_time'] = list(map(lambda x:x.iloc[0]['time_exp'],segments))
+    df_segments['start_time'] = list(map(lambda x:x.iloc[0]['timeExp'],segments))
 
-    df_segments['end_time'] = list(map(lambda x:x.iloc[-1]['time_exp'],segments))
+    df_segments['end_time'] = list(map(lambda x:x.iloc[-1]['timeExp'],segments))
 
     df_segments['min'] = list(map(lambda x: min(x[col]),segments))
 
@@ -50,11 +50,11 @@ def summarize(df:pd.DataFrame,
 
     if force_left_intersection:
         # This has not been implemented correctly, need to shift data to force intersections
-        df_segments['model'] = list(map(lambda df:sm.OLS(df[col],df['time_exp']).fit(use_t=True), segments))
+        df_segments['model'] = list(map(lambda df:sm.OLS(df[col],df['timeExp']).fit(use_t=True), segments))
     else:
-        df_segments['model'] = list(map(lambda df:sm.OLS(df[col],sm.add_constant(df['time_exp'])).fit(use_t=True), segments))
+        df_segments['model'] = list(map(lambda df:sm.OLS(df[col],sm.add_constant(df['timeExp'])).fit(use_t=True), segments))
 
-    df_segments['beta'] = np.vectorize(lambda x: x.params['time_exp'])(df_segments['model'])
+    df_segments['beta'] = np.vectorize(lambda x: x.params['timeExp'])(df_segments['model'])
 
     if not beta_bool:
         df_segments['const'] = np.vectorize(lambda x: x.params['const'])(df_segments['model'])
@@ -65,12 +65,12 @@ def summarize(df:pd.DataFrame,
 
     df_segments['rsquared_adj'] = np.vectorize(lambda x: x.rsquared_adj)(df_segments['model'])
 
-    df_segments['t_beta'] = np.vectorize(lambda x: x.tvalues['time_exp'])(df_segments['model'])
+    df_segments['t_beta'] = np.vectorize(lambda x: x.tvalues['timeExp'])(df_segments['model'])
 
     if not beta_bool:
         df_segments['t_const'] = np.vectorize(lambda x: x.tvalues['const'])(df_segments['model'])
 
-    df_segments['t_pvalue_beta'] = np.vectorize(lambda x: x.pvalues['time_exp'])(df_segments['model'])
+    df_segments['t_pvalue_beta'] = np.vectorize(lambda x: x.pvalues['timeExp'])(df_segments['model'])
 
     if not beta_bool:
         df_segments['t_pvalue_const'] = np.vectorize(lambda x: x.pvalues['const'])(df_segments['model'])
@@ -78,19 +78,19 @@ def summarize(df:pd.DataFrame,
     
     if force_right_intersection:
         # This has not been implemented correctly, need to shift data to force intersections
-        df_segments['init_model'] = list(map(lambda df:sm.OLS(df[:window_size][col],df[:window_size]['time_exp']).fit(use_t=True), segments))
+        df_segments['init_model'] = list(map(lambda df:sm.OLS(df[:window_size][col],df[:window_size]['timeExp']).fit(use_t=True), segments))
     else:
-        df_segments['init_model'] = list(map(lambda df:sm.OLS(df[:window_size][col],sm.add_constant(df[:window_size]['time_exp'])).fit(use_t=True), segments))
+        df_segments['init_model'] = list(map(lambda df:sm.OLS(df[:window_size][col],sm.add_constant(df[:window_size]['timeExp'])).fit(use_t=True), segments))
     
-    df_segments['init_beta_prev'] = [0]+list(np.vectorize(lambda x:x.params['time_exp'])(df_segments['init_model']))[1:]
+    df_segments['init_beta_prev'] = [0]+list(np.vectorize(lambda x:x.params['timeExp'])(df_segments['init_model']))[1:]
 
     if not beta_bool:
         df_segments['init_const_prev'] = [0]+list(np.vectorize(lambda x: x.params['const'])(df_segments['init_model']))[1:]
 
     if beta_bool:
-        df_segments['t_pvalue_right']=df_segments.apply(lambda row: row['init_model'].t_test(f'time_exp = {row["init_beta_prev"]}').pvalue, axis=1)
+        df_segments['t_pvalue_right']=df_segments.apply(lambda row: row['init_model'].t_test(f'timeExp = {row["init_beta_prev"]}').pvalue, axis=1)
     else:
-        df_segments['t_pvalue_right']=df_segments.apply(lambda row: row['init_model'].t_test(pd.Series({'time_exp': row['init_beta_prev'], 'const': row['init_const_prev']})).pvalue, axis=1)
+        df_segments['t_pvalue_right']=df_segments.apply(lambda row: row['init_model'].t_test(pd.Series({'timeExp': row['init_beta_prev'], 'const': row['init_const_prev']})).pvalue, axis=1)
 
     # Can no longer use segments from here as we change order
 
@@ -104,4 +104,4 @@ def summarize(df:pd.DataFrame,
 
     df_segments['split'] = split_list
 
-    df_segments.to_csv(f'outputs/{save_name}.csv', index = False)
+    df_segments.to_csv(f'outputs/{save_name}', index = False)

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import os
-from linear_approach import LinearSegmentation
+from linear_segmentation import LinearSegmentation
 from summarize_segments import summarize
 import sys
 import time
@@ -72,19 +72,25 @@ if __name__ == "__main__":
     file = os.path.join(repo.working_tree_dir, 'input_data', input_args[2], input_args[3], file_name)
     df = pd.read_csv(file)[:5000].reset_index(drop = True)
 
-    col_name = input_args[2] + '_' + input_args[3]
+    col_name = input_args[2] + '_' + input_args[3] + '_clean'
     var_name = (input_args[2] + ' ' + input_args[3]).capitalize()
 
-    df = df[['timeExp', col_name]].copy().dropna().reset_index(drop=True)
-
     plt.plot(df['timeExp'], df[col_name])
+    df = df[['timeExp', col_name]].copy().dropna().reset_index(drop=True)
+    
     start = time.time()
 
-    plot_prediction(time = df['timeExp'], y = df[col_name])
+    if input_args[2] == 'controller':
+        breakpoints = plot_prediction(time = df['timeExp'], y = df[col_name], sig_level = 10**(-4))
+    else:
+        breakpoints = plot_prediction(time = df['timeExp'], y = df[col_name], window_size = 20, sig_level = 10**(-5))
+
+
+
+    #summarize(df, breakpoints, col_name, beta_bool = True, save_name = 'summarize_'+file_name)
 
     print(time.time()-start)
     plt.xlabel('Time (seconds)')
     plt.ylabel(var_name)
     plt.title('Subject ' + input_args[0] + ', session ' + input_args[1] + ', ' + var_name)
     plt.show()
-

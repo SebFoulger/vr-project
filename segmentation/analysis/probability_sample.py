@@ -1,4 +1,4 @@
-from linear_approach import LinearSegmentation
+from segmentation.linear_segmentation import LinearSegmentation
 import numpy as np
 import pandas as pd
 from numpy.random import normal
