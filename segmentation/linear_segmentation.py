@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
+from scipy.stats import shapiro
+from statsmodels.stats.diagnostic import acorr_lm
 
 class LinearSegmentation:
     """
@@ -42,7 +44,7 @@ class LinearSegmentation:
             # Special case for first linear regression
             if i == 0:
                 # Regression with constant
-                left_model = sm.OLS(y[i:j], sm.add_constant(x[i:j]))
+                left_model = sm.OLS(y[:j], sm.add_constant(x[:j]))
                 left_results = left_model.fit(use_t=True)
                 final_pred = left_results.params[x.name]*x[j]+left_results.params['const']
             else:
