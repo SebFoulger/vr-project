@@ -64,33 +64,42 @@ if __name__ == "__main__":
     input_args = sys.argv[1:]
 
     if len(input_args) == 0:
-        input_args = ['1', '1', 'controller', 'speed']
+        input_args = ['1', '1', '1', 'controller', 'speed']
     repo = git.Repo('.', search_parent_directories = True)
 
-    file_name = '_'.join(input_args[:2]) + '.csv'
+    file_name = '_'.join(input_args[:3]) + '.csv'
 
-    file = os.path.join(repo.working_tree_dir, 'input_data', input_args[2], input_args[3], file_name)
-    df = pd.read_csv(file)[:5000].reset_index(drop = True)
+    file = os.path.join(repo.working_tree_dir, 'input_data', input_args[3], input_args[4], file_name)
+    df = pd.read_csv(file)[:4000].reset_index(drop = True)
 
-    col_name = input_args[2] + '_' + input_args[3] + '_clean'
-    var_name = (input_args[2] + ' ' + input_args[3]).capitalize()
+    col_name = f'{input_args[3]}_{input_args[4]}_clean'
+    if input_args[4] == 'accel':
+        var_name = (input_args[3] + ' acceleration').capitalize()
+    elif input_args[4] == 'disp':
+        var_name = (input_args[3] + ' displacement').capitalize()
+    elif input_args[4] == 'dist':
+        var_name = (input_args[3] + ' distance').capitalize()
+    else:
+        var_name = (input_args[3] + ' ' + input_args[4]).capitalize()
+    
 
     plt.plot(df['timeExp'], df[col_name])
     df = df[['timeExp', col_name]].copy().dropna().reset_index(drop=True)
     
-    start = time.time()
+    print(max(df[col_name]))
 
-    if input_args[2] == 'controller':
+    start = time.time()
+    
+    if input_args[3] == 'controller':
         breakpoints = plot_prediction(time = df['timeExp'], y = df[col_name], sig_level = 10**(-4))
     else:
         breakpoints = plot_prediction(time = df['timeExp'], y = df[col_name], window_size = 20, sig_level = 10**(-5))
-
-
-
+    
     #summarize(df, breakpoints, col_name, beta_bool = True, save_name = 'summarize_'+file_name)
 
     print(time.time()-start)
-    plt.xlabel('Time (seconds)')
-    plt.ylabel(var_name)
-    plt.title('Subject ' + input_args[0] + ', session ' + input_args[1] + ', ' + var_name)
+    plt.xlabel('Time elapsed (seconds)')
+
+    plt.ylabel(var_name+' (unit$/s^2$)')
+    plt.title(f'Subject {input_args[0]}, week {input_args[1]}, session {input_args[2]}, {var_name}')
     plt.show()
