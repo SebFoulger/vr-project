@@ -170,18 +170,16 @@ break_early_prob <- function(k, w, n, delta, beta1, beta2, var1, var2, sig_level
         break
       }
     }
-    print('\n')
-    print(cur_min)
-    print(prob_t_sig(delta, input_mu, var[c(m:(m + k + w))], k, w, qt(sig_level, w - 2)))
     probs <- append(probs, min(1, cur_min))
     total_prob <- min(1, total_prob + cur_min)
     if (total_prob == 1) {
       break
     }
   }
+  
   "
   jpeg(paste('images/', as.character(beta1), as.character(beta2), as.character(var1), as.character(var2), 
-             as.character(w), '.jpg'), width = 400, height = 350)
+             as.character(w), '.jpg'), width = 500, height = 350)
 
   title = bquote('β'[1] ~ '=' ~ .(beta1) ~ ', β'[2] ~ '=' ~ .(beta2) ~ ', σ'[1]^2 ~ '=' ~ .(var1) ~ ', σ'[2]^2 ~ '=' ~ 
                  .(var2) ~ ', w =' ~ .(w))
@@ -197,31 +195,32 @@ break_early_prob <- function(k, w, n, delta, beta1, beta2, var1, var2, sig_level
   return (total_prob)
 }
 
-#vars <- c(0.0001, 0.001, 0.01, 0.1, 1)
-vars <- c(1)
+vars <- c(2.56*10^(-5), 0.000213, 0.00147, 0.00736, 0.0276)
+
 probs <- c()
 
-beta1 <- -2
-beta2 <- 2
+beta1 <- -0.189
+beta2 <- 0.417
 
 w <- 10
 
 for (var in vars) {
-  probs <- append(probs, break_early_prob(w, w, 2 * w - 2, 1/90, beta1, beta2, var, var, 0.001, -2))
+  probs <- append(probs, break_early_prob(w, w, 2 * w - 2, 1/90, beta1, beta2, var, var, 0.001, 3))
 }
+
 print(sum(probs))
-"
+
 print(probs)
 
-jpeg(paste('images/', as.character(beta1), as.character(beta2), as.character(w), '.jpg'), 
-      width = 350, height = 350)
+jpeg(paste('images/', as.character(beta1), as.character(beta2), as.character(w), '3.jpg'), 
+      width = 500, height = 350)
 
 title = bquote('β'[1] ~ '=' ~ .(beta1) ~ ', β'[2] ~ '=' ~ .(beta2) ~ ', w =' ~ .(w))
 
 plot(1:length(probs), probs, ylim = c(0, max(probs)), xlab = 'Variance', 
-      ylab = 'Probability of breaking early', col = '#2E9FDF', pch = 20, cex=2, xaxt = 'n', main = title)
+      ylab = 'Probability of breaking', col = '#2E9FDF', pch = 20, cex=2, xaxt = 'n', main = title)
 
 axis(1, at=1:length(probs), labels=vars)
 dev.off()
-"
+
 

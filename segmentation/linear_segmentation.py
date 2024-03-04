@@ -18,22 +18,30 @@ class LinearSegmentation:
                 x: pd.Series, 
                 y: pd.Series,
                 window_size: int = 10, 
-                sig_level: float = 0.01):
+                sig_level: float = 0.01,
+                return_models: bool = False):
         """Apply segmentation procedure.
 
         Args:
-            x (pd.Series): x values. Must be same length as y.
-            y (pd.Series): y values. Must be same length as x.
+            x (pd.Series of float): x values. Must be same length as y.
+            y (pd.Series of float): y values. Must be same length as x.
             window_size (int, optional): Size for window. Defaults to 10.
             sig_level (float, optional): Significance level for statistical difference. Defaults to 0.01.
             x.name (str, optional): Name of the x data
+            return_models (bool, optional): Indicates whether to return the models for each segment. Defaults to False.
         Returns:
-            pd.Series, list: Predictions of fitted model and list of breakpoints for segments
+            dict: {'predictions' (pd.Series of float): Predictions of fitted model.
+                   'breakpoints' (list of int): List of breakpoints for segments.
+                   'model_results' (list of RegressionResults): List of models for each segment. Requires 
+                   return_models to be returned.}
         """
         assert(len(x) == len(y))
         # Initialise variables
         breakpoints = []
         predictions = []
+        if return_models:
+            # Will store all the models
+            model_results = []
         i = 0
         j = window_size
         q = 1
@@ -62,6 +70,8 @@ class LinearSegmentation:
                 # Add breakpoint and predictions
                 breakpoints.append(j - 2)
                 predictions = np.append(predictions, prev_predictions)
+                if return_models:
+                    model_results.append(prev_results)
                 # Update variables to indicate new segment being created
                 prev_pred = prev_predictions[-1]
                 i = j - 1
@@ -71,6 +81,8 @@ class LinearSegmentation:
                 # Move section
                 j += 1
                 q = pvalue
+                if return_models:
+                    prev_results = left_results
                 # Keep track of predictions of previous section
                 prev_predictions = left_results.predict() + prev_pred
 
@@ -79,5 +91,9 @@ class LinearSegmentation:
             final_model = sm.OLS(y[i:] - prev_pred, x[i:]-x[i-1])
             final_results = final_model.fit(use_t=True)
             predictions = np.append(predictions, final_results.predict() + prev_pred)
-
-        return {'predictions': predictions, 'breakpoints': breakpoints}
+            if return_models:
+                model_results.append(final_results)
+        if return_models:
+            return {'predictions': predictions, 'breakpoints': breakpoints, 'model_results': model_results}
+        else:
+            return {'predictions': predictions, 'breakpoints': breakpoints}
