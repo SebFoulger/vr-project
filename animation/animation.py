@@ -14,21 +14,27 @@ class AniObject:
     """
     Object for animation runs of the task
     """    
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, subject_no: int, week_no: int, session_no: int):
         """Initialiser function for class
 
         Args:
             df (pd.DataFrame): dataframe with data for animation.
         """        
-        self.df = df.sort_values(by=['frame']).reset_index(drop=True)
+        self.df = df.reset_index(drop=True).copy()
 
-        self.subject_no = df[' sub'][0]
+        self.df['head_y'], self.df['head_z'] = self.df['head_z'], self.df['head_y']
+        self.df['controller_y'], self.df['controller_z'] = self.df['controller_z'], self.df['controller_y']
+        self.df['hit_y'], self.df['hit_z'] = self.df['hit_z'], self.df['hit_y']
 
-        self.session_no = df[' session'][0]
+        self.subject_no = subject_no
+
+        self.session_no = session_no
+
+        self.week_no = week_no
 
         practice_bool = df['practice'][0]=='practice'
 
-        window_title='Subject: '+str(self.subject_no)+' | Session: '+str(self.session_no)
+        window_title='Subject: '+str(self.subject_no)+' | Week: '+str(self.week_no)+' | Session: '+str(self.session_no)
         window_title+=' | Practice: '+str(practice_bool)
 
         self.fig = plt.figure(window_title)
@@ -37,6 +43,7 @@ class AniObject:
         self.ax.set_xlabel('x')
         self.ax.set_ylabel('y')
         self.ax.set_zlabel('z')
+        #self.ax.view_init(elev=96, azim=-90)
 
     """
     Public Functions
@@ -61,7 +68,7 @@ class AniObject:
         ani_df = self.df[::skip_frames].reset_index(drop=True).copy()
         total_frames = len(ani_df)
 
-        frame_time = ani_df[' timeExp'].diff()
+        frame_time = ani_df['timeExp'].diff()
         ani_df['frame_time'] = frame_time
 
         if fps_bool:
@@ -73,48 +80,49 @@ class AniObject:
         else:
             interval = int(1000/fps)
 
-        self.time_passed=ani_df[' timeExp']
+        self.time_passed=ani_df['timeExp']
 
         is_grabbing = lambda v: v.lower().strip() in ('yes', 'true', 't', '1')
 
         self.grabbed=np.vectorize(is_grabbing)(ani_df['grabbed'])
 
-        self.is_target=ani_df[' isTarget']
+        self.is_target=ani_df['isTarget']
 
         self.plots = {}
 
-        self.plots['head_eye'] = Scatter(xss=np.array([ani_df['head_x'],ani_df['eye_x']]),
-                                         yss=np.array([ani_df['head_y'],ani_df['eye_y']]),
-                                         zss=np.array([ani_df['head_z'],ani_df['eye_z']]),
+        self.plots['head_eye'] = Scatter(xss=np.array([ani_df['head_x'],ani_df['hit_x']]),
+                                         yss=np.array([ani_df['head_y'],ani_df['hit_y']]),
+                                         zss=np.array([ani_df['head_z'],ani_df['hit_z']]),
                                          ax=self.ax,init_marker='.',init_linestyle='--',init_label='head_eye')
 
-        self.plots['controller'] = Arrow(xs=ani_df[' controller_x'],ys=ani_df[' controller_y'],
-                                         zs=ani_df[' controller_z'],yaws=ani_df['controller_yaw'],
-                                         pitches=ani_df[' controller_pitch'],rolls=ani_df[' controller_roll'],
-                                         init_length=arrow_length,init_color='black', init_label='controller',
-                                         ax=self.ax,delta=delta)
+
+        self.plots['controller'] = Arrow(xs=ani_df['controller_x'],ys=ani_df['controller_y'],
+                                         zs=ani_df['controller_z'],yaws=ani_df['controller_yaw'],
+                                         pitches=ani_df['controller_pitch'],rolls=ani_df['controller_roll'],
+                                         init_length=0.1, init_color='black', init_label='controller',
+                                         ax=self.ax, delta=delta)
         
-        workspace_x_mid, workspace_y_mid, workspace_z_mid = -0.05, -2.25, 2
-        resource_x_mid, resource_y_mid, resource_z_mid = 1, -0.188, -0.618
-        model_x_mid, model_y_mid, model_z_mid = -0.841, 0,-1.621
+        workspace_x_mid, workspace_y_mid, workspace_z_mid = -0.05, 2, -2.25
+        resource_x_mid, resource_y_mid, resource_z_mid = 1, -0.618, -0.188
+        model_x_mid, model_y_mid, model_z_mid = -0.841,-1.621, 0
 
         self.plots['workspace'] = self.ax.plot_surface(*self._generate_plane(workspace_x_mid,
-                                    workspace_y_mid,workspace_z_mid,dimensions = (1,1), orientation='y'), color='black')
+                                    workspace_y_mid,workspace_z_mid,dimensions = (1,1), orientation='z'), color='green')
 
         self.plots['resource'] = self.ax.plot_surface(*self._generate_plane(resource_x_mid,
-                                    resource_y_mid,resource_z_mid,dimensions = (1,1), orientation='y'), color='black')
+                                    resource_y_mid,resource_z_mid,dimensions = (1,1), orientation='z'), color='red')
         
         self.plots['model'] = self.ax.plot_surface(*self._generate_plane(model_x_mid,
-                                    model_y_mid,model_z_mid,dimensions = (1,1), orientation='z'), color='black')
+                                    model_y_mid,model_z_mid,dimensions = (1,1), orientation='y'), color='blue')
 
 
-        max_x = max(max(ani_df['head_x']),max(ani_df['eye_x']),max(ani_df[' controller_x']))
-        max_y = max(max(ani_df['head_y']),max(ani_df['eye_y']),max(ani_df[' controller_y']))
-        max_z = max(max(ani_df['head_z']),max(ani_df['eye_z']),max(ani_df[' controller_z']))
+        max_x = max(max(ani_df['head_x']),max(ani_df['hit_x']),max(ani_df['controller_x']))
+        max_y = max(max(ani_df['head_y']),max(ani_df['hit_y']),max(ani_df['controller_y']))
+        max_z = max(max(ani_df['head_z']),max(ani_df['hit_z']),max(ani_df['controller_z']))
 
-        min_x = min(min(ani_df['head_x']),min(ani_df['eye_x']),min(ani_df[' controller_x']))
-        min_y = min(min(ani_df['head_y']),min(ani_df['eye_y']),min(ani_df[' controller_y']))
-        min_z = min(min(ani_df['head_z']),min(ani_df['eye_z']),min(ani_df[' controller_z']))
+        min_x = min(min(ani_df['head_x']),min(ani_df['hit_x']),min(ani_df['controller_x']))
+        min_y = min(min(ani_df['head_y']),min(ani_df['hit_y']),min(ani_df['controller_y']))
+        min_z = min(min(ani_df['head_z']),min(ani_df['hit_z']),min(ani_df['controller_z']))
 
         self.txt = self.fig.suptitle('', x=0.25)
 
@@ -207,8 +215,8 @@ class AniObject:
 repo = git.Repo('.', search_parent_directories=True)
 repo.working_tree_dir
 
-file_location = repo.working_tree_dir+'/input_data/test1.csv'
+file_location = repo.working_tree_dir+'/input_data/raw/1_0_1.csv'
 df = pd.read_csv(file_location)
 
-obj = AniObject(df=df)
-obj.animate(skip_frames=10, speed=5)
+obj = AniObject(df, 1, 1, 1)
+obj.animate(fps = 90, fps_bool=True, skip_frames=2)

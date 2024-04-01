@@ -3,9 +3,10 @@
 smoothness.py contains a list of functions for estimating movement smoothness.
 """
 import numpy as np
+import pandas as pd
 
 
-def sparc(movement, fs, padlevel=4, fc=10.0, amp_th=0.05):
+def sparc(movement, fs, padlevel=4, fc=10.0, amp_th=0.05, return_spectrum: bool = False):
     """
     Calcualtes the smoothness of the given speed profile using the modified
     spectral arc length metric.
@@ -26,7 +27,9 @@ def sparc(movement, fs, padlevel=4, fc=10.0, amp_th=0.05):
                The amplitude threshold to used for determing the cut off
                frequency upto which the spectral arc length is to be estimated.
                [default = 0.05]
-
+    return_spectrum : bool, optional
+               Indicate whether to return the spectrum as well as the calcualted value
+               
     Returns
     -------
     sal      : float
@@ -82,89 +85,12 @@ def sparc(movement, fs, padlevel=4, fc=10.0, amp_th=0.05):
     # Calculate arc length
     new_sal = -sum(np.sqrt(pow(np.diff(f_sel) / (f_sel[-1] - f_sel[0]), 2) +
                            pow(np.diff(Mf_sel), 2)))
-    return new_sal, (f, Mf), (f_sel, Mf_sel)
+    if return_spectrum:
+        return new_sal, (f, Mf), (f_sel, Mf_sel)
+    else:
+        return new_sal
 
-
-def dimensionless_jerk(movement, fs):
-    """
-    Calculates the smoothness metric for the given speed profile using the
-    dimensionless jerk metric.
-
-    Parameters
-    ----------
-    movement : np.array
-               The array containing the movement speed profile.
-    fs       : float
-               The sampling frequency of the data.
-
-    Returns
-    -------
-    dl       : float
-               The dimensionless jerk estimate of the given movement's
-               smoothness.
-
-    Notes
-    -----
-
-
-    Examples
-    --------
-    >>> t = np.arange(-1, 1, 0.01)
-    >>> move = np.exp(-5*pow(t, 2))
-    >>> dl = dimensionless_jerk(move, fs=100.)
-    >>> '%.5f' % dl
-    '-335.74684'
-
-    """
-    # first enforce data into an numpy array.
-    movement = np.array(movement)
-
-    # calculate the scale factor and jerk.
-    movement_peak = max(abs(movement))
-    dt = 1. / fs
-    movement_dur = len(movement) * dt
-    jerk = np.diff(movement, 2) / pow(dt, 2)
-    scale = pow(movement_dur, 3) / pow(movement_peak, 2)
-
-    # estimate dj
-    return - scale * sum(pow(jerk, 2)) * dt
-
-
-def log_dimensionless_jerk(movement, fs):
-    """
-    Calculates the smoothness metric for the given speed profile using the
-    log dimensionless jerk metric.
-
-    Parameters
-    ----------
-    movement : np.array
-               The array containing the movement speed profile.
-    fs       : float
-               The sampling frequency of the data.
-
-    Returns
-    -------
-    ldl      : float
-               The log dimensionless jerk estimate of the given movement's
-               smoothness.
-
-    Notes
-    -----
-
-
-    Examples
-    --------
-    >>> t = np.arange(-1, 1, 0.01)
-    >>> move = np.exp(-5*pow(t, 2))
-    >>> ldl = log_dimensionless_jerk(move, fs=100.)
-    >>> '%.5f' % ldl
-    '-5.81636'
-
-    """
-    return -np.log(abs(dimensionless_jerk(movement, fs)))
-
-
-def dimensionless_jerk2(movement, fs, data_type='speed'):
+def dj(movement, fs, data_type='speed'):
     """
     Calculates the smoothness metric for the given movement data using the
     dimensionless jerk metric. The input movement data can be 'speed',
@@ -231,7 +157,7 @@ def dimensionless_jerk2(movement, fs, data_type='speed'):
                                     "'speed', 'accl' or 'jerk'.")))
 
 
-def log_dimensionless_jerk2(movement, fs, data_type='speed'):
+def ldj(movement, fs, data_type='speed'):
     """
     Calculates the smoothness metric for the given movement data using the
     log dimensionless jerk metric. The input movement data can be 'speed',
@@ -254,17 +180,35 @@ def log_dimensionless_jerk2(movement, fs, data_type='speed'):
                The log dimensionless jerk estimate of the given movement's
                smoothness.
 
-    Notes
-    -----
-
-
-    Examples
-    --------
-    >>> t = np.arange(-1, 1, 0.01)
-    >>> move = np.exp(-5*pow(t, 2))
-    >>> ldl = log_dimensionless_jerk(move, fs=100.)
-    >>> '%.5f' % ldl
-    '-5.81636'
-
     """
-    return -np.log(abs(dimensionless_jerk2(movement, fs, data_type)))
+    return -np.log(abs(dj(movement, fs, data_type)))
+
+class SegmentMetric:
+    def __init__(self, metric):
+        self.metric = metric
+
+    def value(self, movement, fs: float, breakpoints: list, data_type: str = None):
+        assert(breakpoints[-1] <= len(movement))
+
+        prev_break = 0
+
+        metric_list = []
+        weights = []
+
+        for _break in breakpoints:
+
+            cur_movement = movement[prev_break:_break - 1].reset_index(drop=True)
+            if data_type is None:
+                metric_list.append(self.metric(cur_movement, fs))
+                
+            else:
+                metric_list.append(self.metric(cur_movement, fs, data_type=data_type))
+            weights.append(_break - prev_break - 1)
+            prev_break = _break
+
+        metric_list = np.array(metric_list)
+        weights = np.array(weights)
+        weights = weights[~np.isnan(metric_list)]
+        metric_list = metric_list[~np.isnan(metric_list)]
+
+        return np.average(metric_list, weights=weights)

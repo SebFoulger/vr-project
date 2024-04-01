@@ -8,9 +8,9 @@ def summarize(df:pd.DataFrame,
               breakpoints: list,
               col: str,
               model_results: list,
+              save_name: str,
               no_splits: int = 5,
-              window_size: int = 10,
-              save_name: str = 'summarize.csv'):
+              window_size: int = 10):
     """Summarizes segmented data
 
     Args:

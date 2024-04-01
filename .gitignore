@@ -1,5 +1,5 @@
 input_data/*
-raw_data/metadata/*
+raw_data/*
 animation/__pycache__/plottable_objects.cpython-37.pyc
 notebooks/*
 *.pyc

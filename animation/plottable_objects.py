@@ -58,8 +58,11 @@ class Scatter:
         else:
             self.prev_label=label
 
-        self.points.set_data(self.xss[:,t],self.yss[:,t])
-        self.points.set_3d_properties(self.zss[:,t], 'z')
+        if self.xss[1, t] == 0 and self.yss[1, t] == 0 and self.zss[1, t] == 0:
+
+            self.points.set_data_3d(self.xss[0,t],self.yss[0,t], self.zss[0,t])
+        else:
+            self.points.set_data_3d(self.xss[:,t],self.yss[:,t], self.zss[:,t])
 
         self.points.set_marker(marker)
         self.points.set_linestyle(linestyle)

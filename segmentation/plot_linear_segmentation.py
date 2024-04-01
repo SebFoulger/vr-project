@@ -98,27 +98,21 @@ if __name__ == "__main__":
     df = df[['timeExp', col_name]].copy().dropna().reset_index(drop=True)
     print(np.mean(df[col_name]**2))
     start = time.time()
-    
-    breakpoint_file_name = os.path.join(repo.working_tree_dir, 'outputs', 'breakpoints')
-    """
+        
     if input_args[3] == 'controller':
         return_dict = plot_prediction(time = df['timeExp'], y = df[col_name], sig_level = 10**(-4), return_models=True)
         summarize(df, return_dict['breakpoints'], col_name, model_results=return_dict['model_results'], 
               save_name = 'summarize_'+'_'.join(input_args[:3]) + '_c.csv')
-        breakpoint_file_name = os.path.join(breakpoint_file_name, '_'.join(input_args[:3])+'_c.json')
     
     else:
         return_dict = plot_prediction(time = df['timeExp'], y = df[col_name], window_size = 20, sig_level = 10**(-5),
                                       return_models=True)
         summarize(df, return_dict['breakpoints'], col_name, model_results=return_dict['model_results'], 
               save_name = 'summarize_'+'_'.join(input_args[:3]) + '_h.csv', window_size=20)
-        breakpoint_file_name = os.path.join(breakpoint_file_name, '_'.join(input_args[:3])+'_h.json')
 
-    with open(breakpoint_file_name, 'w') as breakpoint_file:
-        json.dump(return_dict['breakpoints'], breakpoint_file)
 
     print(time.time()-start)
-    """
+    
     plt.xlabel('Time elapsed (seconds)')
 
     plt.ylabel(var_name+' (unit$/s^2$)')
