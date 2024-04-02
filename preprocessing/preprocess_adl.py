@@ -86,7 +86,7 @@ def parameter_values(fs: float = 120):
             peaks = df.iloc[find_peaks(df['speed'], prominence=0.05)[0]]['speed']
             rest = len(df[df['speed']<0.05])
 
-            cur_dict = {'id': file_name[:2]+'_o', 'duration': len(df), 'mean_peak': np.mean(peaks), 
+            cur_dict = {'id': file_name[:2]+'_o', 'duration': len(df)/fs, 'mean_peak': np.mean(peaks), 
                         'path_length': sum(df['speed']/fs), 'rel_activity': rest/len(df)}
 
             parameter_df = parameter_df.append(cur_dict, ignore_index=True)
@@ -100,17 +100,17 @@ def parameter_values(fs: float = 120):
             peaks = df.iloc[find_peaks(df['speed'], prominence=0.05)[0]]['speed']
             rest = len(df[df['speed']<0.05])
 
-            cur_dict = {'id': file_name[:2]+'_y', 'duration': len(df), 'mean_peak': np.mean(peaks), 
+            cur_dict = {'id': file_name[:2]+'_y', 'duration': len(df)/fs, 'mean_peak': np.mean(peaks), 
                         'path_length': sum(df['speed']/fs), 'rel_activity': rest/len(df)}
 
             parameter_df = parameter_df.append(cur_dict, ignore_index=True)
     
     parameter_df.to_csv(os.path.join(repo.working_tree_dir, 'outputs', 'adl_parameters.csv'), index=False)
-
+"""
 def temp(fs = 120):
     repo = git.Repo('.', search_parent_directories=True)
     file_path = os.path.join(repo.working_tree_dir, 'input_data', 'adl')
-    """
+    
     for file_name in os.listdir(os.path.join(file_path, 'old')):
         print(file_name)
         file = os.path.join(file_path, 'old', file_name)
@@ -118,7 +118,7 @@ def temp(fs = 120):
         df['jerk_clean_2'] =  np.append([np.nan, np.nan], loess_1d(np.array([i / fs for i in range(len(df)-2)]), 
                                                                    np.array(df.dropna()['jerk']), npoints = 12)[1])
         df.to_csv(file, index=False)
-    """
+    
 
     for file_name in os.listdir(os.path.join(file_path, 'young')):
         print(file_name)
@@ -129,11 +129,9 @@ def temp(fs = 120):
                                                                    np.array(df.dropna()['jerk']), npoints = 12)[1])
         
         df.to_csv(file, index=False)
-
+"""
 if __name__ == "__main__":
     #preprocess(files = [])
     #calculate_jerk()
     #split_files()
-
-    #parameter_values()
-    temp()
+    parameter_values()
