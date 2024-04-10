@@ -101,8 +101,10 @@ if __name__ == "__main__":
                                         return_models=True)
             print(file_name, 'segmentation done in', time.time()-start, 'seconds.')
             start = time.time()
+            
             summarize(df, return_dict['breakpoints'], col_name, model_results=return_dict['model_results'], 
                       save_name = 'summarize_'+'_'.join([sub, week, session]) + '_c.csv')
+                      
             print(file_name, 'summarizing done in', time.time()-start, 'seconds.')
             breakpoint_file_name = os.path.join(breakpoint_file_name, '_'.join([sub, week, session])+'_c.json')
         

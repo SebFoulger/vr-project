@@ -24,11 +24,11 @@ def summarize(df:pd.DataFrame,
         save_name (str, optional): name to save output file as. Defaults to 'summarize'.
     """    
     segments = [df.iloc[breakpoints[i-1]:breakpoints[i]] for i in range(1,len(breakpoints)) if breakpoints[i]-breakpoints[i-1] >= window_size-1]
-
+    
     mean_segments = list(map(lambda x: np.mean(x[col]),segments))
 
     df_segments = pd.DataFrame({'mean': mean_segments})
-
+    
     df_segments['median'] = list(map(lambda x:np.median(x[col]), segments))
 
     df_segments['start_time'] = list(map(lambda x:x.iloc[0]['timeExp'],segments))
@@ -52,6 +52,6 @@ def summarize(df:pd.DataFrame,
     df_segments['model_std'] = list(map(lambda x: x.scale**.5, model_results))
 
     repo = git.Repo('.', search_parent_directories = True)
-    save_path = os.path.join(repo.working_tree_dir, 'outputs', 'summarize', save_name)
+    save_path = os.path.join(repo.working_tree_dir, 'outputs', 'adl_summarize', save_name)
 
     df_segments.to_csv(save_path, index = False)

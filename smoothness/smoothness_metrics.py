@@ -4,6 +4,7 @@ smoothness.py contains a list of functions for estimating movement smoothness.
 """
 import numpy as np
 import pandas as pd
+from scipy.signal import find_peaks
 
 
 def sparc(movement, fs, padlevel=4, fc=10.0, amp_th=0.05, return_spectrum: bool = False):
@@ -90,7 +91,24 @@ def sparc(movement, fs, padlevel=4, fc=10.0, amp_th=0.05, return_spectrum: bool 
     else:
         return new_sal
 
-def dj(movement, fs, data_type='speed'):
+def ldj_adl(movement, fs, movement_peak = 0, data_type='speed'):
+    
+    # first enforce data into an numpy array.
+    movement = np.array(movement)
+
+    dt = 1. / fs
+    movement_dur = len(movement) * dt
+    
+    if data_type=='speed':
+        movement_peak = max(abs(movement))   
+        movement = np.diff(movement)
+          
+    scale = pow(movement_dur, 3) / pow(movement_peak, 2)
+
+    # estimate dj
+    return - np.log(scale * sum(pow(movement, 2)))
+
+def dj(movement, fs, movement_peak=0, data_type='speed'):
     """
     Calculates the smoothness metric for the given movement data using the
     dimensionless jerk metric. The input movement data can be 'speed',
@@ -131,16 +149,13 @@ def dj(movement, fs, data_type='speed'):
         # first enforce data into an numpy array.
         movement = np.array(movement)
 
-        # calculate the scale factor and jerk.
-        movement_peak = max(abs(movement))
         dt = 1. / fs
         movement_dur = len(movement) * dt
-        # get scaling factor:
-        _p = {'speed': 3,
-              'accl': 1,
-              'jerk': -1}
-        p = _p[data_type]
-        scale = pow(movement_dur, p) / pow(movement_peak, 2)
+        
+        if data_type == 'speed':
+            movement_peak = max(abs(movement))
+            
+        scale = pow(movement_dur, 3) / pow(movement_peak, 2)
 
         # estimate jerk
         if data_type == 'speed':
@@ -157,7 +172,7 @@ def dj(movement, fs, data_type='speed'):
                                     "'speed', 'accl' or 'jerk'.")))
 
 
-def ldj(movement, fs, data_type='speed'):
+def ldj(movement, fs, movement_peak=0, data_type='speed'):
     """
     Calculates the smoothness metric for the given movement data using the
     log dimensionless jerk metric. The input movement data can be 'speed',
@@ -181,13 +196,53 @@ def ldj(movement, fs, data_type='speed'):
                smoothness.
 
     """
-    return -np.log(abs(dj(movement, fs, data_type)))
+    return -np.log(abs(dj(movement, fs, movement_peak, data_type)))
+
+def nop(movement, fs):
+    """Calculates number of peaks per meter with a prominence at least 0.05m/s
+
+    Args:
+        movement: speed profile
+        fs (int): frequency
+    """    
+    distance = sum(movement)/fs
+    no_peaks = len(find_peaks(movement, prominence=0.05)[0])
+
+    return -no_peaks/distance
+
+def nos(movement, fs, breakpoints):
+    prev_break=0
+    count=0
+    for _break in breakpoints:
+        if _break - prev_break >=2:
+            count+=1
+        prev_break = _break
+    distance = sum(movement)/fs
+
+    return -count/distance
+
+def nosp(movement, fs, breakpoints, betas):
+    prev_break=breakpoints[0]
+    count=0
+    index=1
+
+    for _break in breakpoints[1:-1]:
+        if _break - prev_break >= 9:
+            #print(breakpoints.index(_break), _break, index)
+            if betas[index]<0 and betas[index-1]>0:
+                count+=1
+            index+=1
+            
+        prev_break = _break
+    distance = sum(movement)/fs
+
+    return -count/distance
 
 class SegmentMetric:
     def __init__(self, metric):
         self.metric = metric
 
-    def value(self, movement, fs: float, breakpoints: list, data_type: str = None):
+    def value(self, movement, fs: float, breakpoints: list, data_type: str = None, speed = []):
         assert(breakpoints[-1] <= len(movement))
 
         prev_break = 0
@@ -198,12 +253,15 @@ class SegmentMetric:
         for _break in breakpoints:
 
             cur_movement = movement[prev_break:_break - 1].reset_index(drop=True)
+            if len(cur_movement)<10:
+                continue
             if data_type is None:
                 metric_list.append(self.metric(cur_movement, fs))
                 
             else:
-                metric_list.append(self.metric(cur_movement, fs, data_type=data_type))
-            weights.append(_break - prev_break - 1)
+                cur_speed = speed[prev_break:_break - 1].reset_index(drop=True)
+                metric_list.append(self.metric(cur_movement, fs, data_type=data_type, movement_peak = max(cur_speed)))
+            weights.append(_break - prev_break)
             prev_break = _break
 
         metric_list = np.array(metric_list)
