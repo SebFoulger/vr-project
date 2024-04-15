@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 from scipy.stats import shapiro
-from statsmodels.stats.diagnostic import acorr_lm
 
 class LinearSegmentation:
     """
@@ -19,7 +17,8 @@ class LinearSegmentation:
                 y: pd.Series,
                 window_size: int = 10, 
                 sig_level: float = 0.01,
-                return_models: bool = False):
+                return_models: bool = False,
+                normality_test: bool = False):
         """Apply segmentation procedure.
 
         Args:
@@ -29,6 +28,8 @@ class LinearSegmentation:
             sig_level (float, optional): Significance level for statistical difference. Defaults to 0.01.
             x.name (str, optional): Name of the x data
             return_models (bool, optional): Indicates whether to return the models for each segment. Defaults to False.
+            normality_test (bool, optional): Indicates whether to return normality test results for residuals of 
+            regressions. Defaults to False.
         Returns:
             dict: {'predictions' (pd.Series of float): Predictions of fitted model.
                    'breakpoints' (list of int): List of breakpoints for segments.
@@ -48,6 +49,10 @@ class LinearSegmentation:
         prev_pred = 0
         # final_pred will be the next prediction of the left segment - the right window will be forced to go through
         # this point.
+        if normality_test:
+            shapiro_sig_count = 0
+            shapiro_total_p = 0
+
         while j + window_size <= len(x):
             # Special case for first linear regression
             if i == 0:
@@ -72,6 +77,11 @@ class LinearSegmentation:
                 predictions = np.append(predictions, prev_predictions)
                 if return_models:
                     model_results.append(prev_results)
+                    if normality_test:
+                        shapiro_p = shapiro(prev_results.resid).pvalue
+                        if shapiro_p < 0.01:
+                            shapiro_sig_count+=1
+                        shapiro_total_p += shapiro_p
                 # Update variables to indicate new segment being created
                 prev_pred = prev_predictions[-1]
                 i = j - 1
@@ -85,7 +95,6 @@ class LinearSegmentation:
                     prev_results = left_results
                 # Keep track of predictions of previous section
                 prev_predictions = left_results.predict() + prev_pred
-
         # Build model on final section of data
         if j<len(x):
             final_model = sm.OLS(y[i:] - prev_pred, x[i:]-x[i-1])
@@ -93,7 +102,13 @@ class LinearSegmentation:
             predictions = np.append(predictions, final_results.predict() + prev_pred)
             if return_models:
                 model_results.append(final_results)
+        
+        return_dict = {'predictions': predictions, 'breakpoints': breakpoints}
         if return_models:
-            return {'predictions': predictions, 'breakpoints': breakpoints, 'model_results': model_results}
-        else:
-            return {'predictions': predictions, 'breakpoints': breakpoints}
+            return_dict['model_results'] = model_results
+
+        if normality_test:
+            return_dict['mean_normal_p'] = shapiro_total_p/len(model_results)
+            return_dict['sig_normal_p'] = shapiro_sig_count/len(model_results)
+
+        return return_dict
