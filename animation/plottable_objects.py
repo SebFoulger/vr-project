@@ -28,7 +28,7 @@ class Scatter:
         self.prev_linestyle=init_linestyle
         self.prev_label=init_label
         self.points, = ax.plot(xss[:,0],yss[:,0],zss[:,0], 
-                               marker=init_marker, linestyle=init_linestyle, label=init_label)
+                               marker=init_marker, linestyle=init_linestyle, label=init_label, zorder=3)
 
     """Public functions"""
 
@@ -104,7 +104,7 @@ class Arrow:
         self.prev_label = init_label
 
         self.quiver = ax.quiver(*self._get_arrow(xs[0], ys[0],zs[0],yaws[0],pitches[0],rolls[0]), length=init_length, 
-                                color=init_color, label=init_label)
+                                color=init_color, label=init_label, zorder=2)
 
     """Public functions"""
 
@@ -136,7 +136,7 @@ class Arrow:
 
         self.quiver.remove()
         self.quiver = self.ax.quiver(*self._get_arrow(self.xs[t], self.ys[t], self.zs[t], self.yaws[t],self.pitches[t],
-                                                      self.rolls[t]), length=length, color=color, label=label)
+                                                      self.rolls[t]), length=length, color=color, label=label, zorder=2)
 
     """Private functions"""
 

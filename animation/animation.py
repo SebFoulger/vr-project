@@ -99,21 +99,24 @@ class AniObject:
         self.plots['controller'] = Arrow(xs=ani_df['controller_x'],ys=ani_df['controller_y'],
                                          zs=ani_df['controller_z'],yaws=ani_df['controller_yaw'],
                                          pitches=ani_df['controller_pitch'],rolls=ani_df['controller_roll'],
-                                         init_length=0.1, init_color='black', init_label='controller',
+                                         init_length=arrow_length, init_color='black', init_label='controller',
                                          ax=self.ax, delta=delta)
         
-        workspace_x_mid, workspace_y_mid, workspace_z_mid = -0.05, 2, -2.25
-        resource_x_mid, resource_y_mid, resource_z_mid = 1, -0.618, -0.188
-        model_x_mid, model_y_mid, model_z_mid = -0.841,-1.621, 0
+        workspace_x_mid, workspace_y_mid, workspace_z_mid = 2.25, 0.5, -0.7
+        resource_x_mid, resource_y_mid, resource_z_mid = 1, -0.5, -0.7
+        model_x_mid, model_y_mid, model_z_mid = 3.5,0.5, 0.5
 
         self.plots['workspace'] = self.ax.plot_surface(*self._generate_plane(workspace_x_mid,
-                                    workspace_y_mid,workspace_z_mid,dimensions = (1,1), orientation='z'), color='green')
+                                    workspace_y_mid,workspace_z_mid,dimensions = (0.7,1.5), orientation='z'), 
+                                    color='green', zorder=1)
 
         self.plots['resource'] = self.ax.plot_surface(*self._generate_plane(resource_x_mid,
-                                    resource_y_mid,resource_z_mid,dimensions = (1,1), orientation='z'), color='red')
+                                    resource_y_mid,resource_z_mid,dimensions = (1.5,0.7), orientation='z'), 
+                                    color='black', zorder=1)
         
         self.plots['model'] = self.ax.plot_surface(*self._generate_plane(model_x_mid,
-                                    model_y_mid,model_z_mid,dimensions = (1,1), orientation='y'), color='blue')
+                                    model_y_mid,model_z_mid,dimensions = (1.5,1.5), orientation='x'), color='blue', 
+                                    zorder=1)
 
 
         max_x = max(max(ani_df['head_x']),max(ani_df['hit_x']),max(ani_df['controller_x']))
@@ -132,6 +135,11 @@ class AniObject:
 
         self.ani=animation.FuncAnimation(self.fig, self._update_animation, frames=total_frames, interval = interval)
         self.ani.running = True
+
+        min_x, max_x = 0, 4
+        min_y, max_y = -1.5, 1.5
+        min_z, max_z = -2, 2
+  
 
         self.ax.legend()
         self.ax.set_xlim(min_x,max_x)
@@ -217,6 +225,7 @@ repo.working_tree_dir
 
 file_location = repo.working_tree_dir+'/input_data/raw/1_0_1.csv'
 df = pd.read_csv(file_location)
+df = df[df['timeExp']>105].reset_index(drop=True)
 
 obj = AniObject(df, 1, 1, 1)
-obj.animate(fps = 90, fps_bool=True, skip_frames=2)
+obj.animate(fps = 45, fps_bool=True, skip_frames=2)

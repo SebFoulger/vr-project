@@ -47,7 +47,7 @@ class LinearSegmentation:
         j = window_size
         q = 1
         prev_pred = 0
-        # final_pred will be the next prediction of the left segment - the right window will be forced to go through
+        # prev_pred will be the next prediction of the left segment - the right window will be forced to go through
         # this point.
         if normality_test:
             shapiro_sig_count = 0

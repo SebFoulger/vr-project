@@ -8,6 +8,7 @@ from summarize_segments import summarize
 import sys
 import time
 import json
+from scipy.stats import pearsonr
 
 def plot_prediction(time: pd.Series,
                     y: pd.Series,
@@ -17,7 +18,8 @@ def plot_prediction(time: pd.Series,
                     break_line_color: str = 'black',
                     prediction_line_color: str = 'orange',
                     window_size: int = 10,
-                    return_models: bool = False):
+                    return_models: bool = False,
+                    normality_test: bool = False):
     """Plot model and breakpoints (optionally)
     Args:
         time (pd.Series): Time data.
@@ -30,10 +32,12 @@ def plot_prediction(time: pd.Series,
         prediction_line_color (str, optional): Colour to use for model plots. Defaults to 'orange'.
         window_size (int, optional): Window size to use in segmentation. Defaults to 10.
         return_models (bool, optional): Indicates whether to return the models for each segment. Defaults to False.
+        normality_test (bool, optional): Indicates whether to return normality test results for residuals of 
+        regressions. Defaults to False. 
     Returns:
         dict: {'breakpoints' (list of int): List of all breakpoints,
                'model_results' (list of RegressionResults): List of models for each segment. Requires return_models to 
-               be returned.}
+               be returned}
     """    
     assert(len(time) == len(y))
 
@@ -41,6 +45,11 @@ def plot_prediction(time: pd.Series,
     prev_break = 0
     if return_models:
         model_results = []
+    if normality_test:
+        mean_normal_p = []
+        sig_normal_p = []
+    lengths = []
+    lengths2 = []
     # Loop over all larger sections of data
     for _break in list(time.loc[time.diff() > cut_time].index) + [len(time)]:
         # Find the current time and y values
@@ -49,13 +58,19 @@ def plot_prediction(time: pd.Series,
         # Segment current data
         segmentation = LinearSegmentation()
         segmentation_dict = segmentation.segment(x = cur_time, y = cur_y, window_size = window_size, 
-                                                        sig_level = sig_level, return_models=return_models)
+                                                        sig_level = sig_level, return_models=return_models, 
+                                                        normality_test=normality_test)
         predictions, breakpoints = segmentation_dict['predictions'], segmentation_dict['breakpoints']                                         
         # Add breakpoints to total list of breakpoints
         all_breakpoints += [prev_break] + list(map(lambda x: x + prev_break, breakpoints))
         all_breakpoints += [prev_break + len(predictions)]
         if return_models:
             model_results += segmentation_dict['model_results']
+        if normality_test:
+            mean_normal_p.append(segmentation_dict['mean_normal_p'])
+            sig_normal_p.append(segmentation_dict['sig_normal_p'])
+        lengths.append(segmentation_dict['lengths'])
+        lengths2.append(_break-prev_break)
         # Plot breakpoints
         if plot_breaks:
             for small_break in breakpoints:
@@ -64,6 +79,10 @@ def plot_prediction(time: pd.Series,
         # Plot predictions
         plt.plot(time[prev_break:prev_break + len(predictions)], predictions, color = prediction_line_color)
         prev_break = _break 
+    if normality_test:
+        print(f'Mean p-value for normality tests: {np.mean(mean_normal_p)}')
+        print(f'Mean percentage of segments with significantly non-normal residuals {np.mean(sig_normal_p)}')
+    print(pearsonr(np.array(lengths), np.array(lengths2)))
     if return_models:
         return {'breakpoints': all_breakpoints, 'model_results': model_results}
     else:
@@ -96,17 +115,17 @@ if __name__ == "__main__":
 
     plt.plot(df['timeExp'], df[col_name])
     df = df[['timeExp', col_name]].copy().dropna().reset_index(drop=True)
-    print(np.mean(df[col_name]**2))
     start = time.time()
         
     if input_args[3] == 'controller':
-        return_dict = plot_prediction(time = df['timeExp'], y = df[col_name], sig_level = 10**(-4), return_models=True)
+        return_dict = plot_prediction(time = df['timeExp'], y = df[col_name], sig_level = 10**(-4), return_models=True,
+                                      normality_test=True)
         summarize(df, return_dict['breakpoints'], col_name, model_results=return_dict['model_results'], 
               save_name = 'summarize_'+'_'.join(input_args[:3]) + '_c.csv')
     
     else:
         return_dict = plot_prediction(time = df['timeExp'], y = df[col_name], window_size = 20, sig_level = 10**(-5),
-                                      return_models=True)
+                                      return_models=True, normality_test=True)
         summarize(df, return_dict['breakpoints'], col_name, model_results=return_dict['model_results'], 
               save_name = 'summarize_'+'_'.join(input_args[:3]) + '_h.csv', window_size=20)
 

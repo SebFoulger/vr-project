@@ -87,11 +87,11 @@ def parameter_values(fs: float = 120):
             continue
         file = os.path.join(file_path, 'old', file_name)
         df = pd.read_csv(file)
-        peaks = df.iloc[find_peaks(df['speed'], prominence=0.05)[0]]['speed']
-        rest = len(df[df['speed']<0.05])
+        peaks = df.iloc[find_peaks(df['speed_clean'], prominence=0.05)[0]]['speed_clean']
+        rest = len(df[df['speed_clean']<0.05])
 
         cur_dict = {'id': file_name[:2]+'_o', 'duration': len(df)/fs, 'mean_peak': np.mean(peaks), 
-                    'path_length': sum(df['speed']/fs), 'rel_activity': rest/len(df)}
+                    'path_length': sum(df['speed_clean']/fs), 'rel_activity': rest/len(df)}
 
         parameter_df = parameter_df.append(cur_dict, ignore_index=True)
 
@@ -102,18 +102,18 @@ def parameter_values(fs: float = 120):
         file = os.path.join(file_path, 'young', file_name)
         df = pd.read_csv(file)
 
-        peaks = df.iloc[find_peaks(df['speed'], prominence=0.05)[0]]['speed']
-        rest = len(df[df['speed']<0.05])
+        peaks = df.iloc[find_peaks(df['speed_clean'], prominence=0.05)[0]]['speed_clean']
+        rest = len(df[df['speed_clean']<0.05])
 
         cur_dict = {'id': file_name[:2]+'_y', 'duration': len(df)/fs, 'mean_peak': np.mean(peaks), 
-                    'path_length': sum(df['speed']/fs), 'rel_activity': rest/len(df)}
+                    'path_length': sum(df['speed_clean']/fs), 'rel_activity': rest/len(df)}
 
         parameter_df = parameter_df.append(cur_dict, ignore_index=True)
     
     parameter_df.to_csv(os.path.join(repo.working_tree_dir, 'outputs', 'adl_parameters.csv'), index=False)
 
 if __name__ == "__main__":
-    preprocess()
-    calculate_jerk()
-    split_files()
+    #preprocess()
+    #calculate_jerk()
+    #split_files()
     parameter_values()
